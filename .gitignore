@@ -1,0 +1,7 @@
+# Ignore temporary dir
+tmp/
+
+# Ignore system generated files
+.DS_Store
+*.swp
+*~
