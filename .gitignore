@@ -1,5 +1,6 @@
 # Ignore temporary dir
 tmp/
+build/
 
 # Ignore system generated files
 .DS_Store
