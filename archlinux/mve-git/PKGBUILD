@@ -33,6 +33,9 @@ build() {
 }
 
 package() {
+  cd $startdir
+  install -D -m644 mve-config.cmake $pkgdir/usr/lib/cmake/Mve/mve-config.cmake
+
   cd $srcdir/$pkgname
   install -D -m644 Makefile.inc "$pkgdir/opt/mve/Makefile.inc"
   install -D -m644 COPYING.txt $pkgdir/usr/share/licenses/$pkgname/LICENSE
