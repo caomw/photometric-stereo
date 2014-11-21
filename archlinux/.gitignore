@@ -1,0 +1,2 @@
+# Ignore generated files from makepkg on Arch Linux
+*.pkg.tar.xz
