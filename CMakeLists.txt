@@ -13,3 +13,4 @@ include_directories(${MVE_INCLUDE_DIRS})
 
 add_executable(pba pba.cpp)
 target_link_libraries(pba ${CERES_LIBRARIES} ${MVE_LIBRARIES})
+set_target_properties(pba PROPERTIES COMPILE_OPTIONS "-std=c++11")
