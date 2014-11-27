@@ -1,5 +1,7 @@
-Photometric Bundle Adjustment
-=============================
+Photometric Stereo
+==================
+
+1. Photometric Bundle Adjustment
 
 ## References
 [1]: https://hal.inria.fr/hal-00985811/ "Photometric Bundle Adjustment for Dense Multi-View 3D Modeling (Amaël Delaunoy and Marc Pollefeys)"
