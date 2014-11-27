@@ -1,7 +1,7 @@
 # Maintainer: David Lin <davll.xc@gmail.com>
 
 pkgname=mve-git
-pkgver=r740.76a1376
+pkgver=r747.2f95ee6
 pkgrel=1
 pkgdesc="Multi-View Environment"
 arch=(i686 x86_64)

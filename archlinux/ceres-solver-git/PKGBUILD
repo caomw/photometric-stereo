@@ -1,7 +1,7 @@
 # Maintainer: David Lin <davll.xc@gmail.com>
 
 pkgname=ceres-solver-git
-pkgver=r829.19d7ce9
+pkgver=r830.9ad59a7
 pkgrel=1
 pkgdesc="Ceres Solver"
 arch=(i686 x86_64)
