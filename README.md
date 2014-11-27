@@ -5,7 +5,8 @@ Photometric Stereo
 
 ### 1. Ceres Solver
 
-- Sameer Agarwal, Keir Mierle and Others
+by Sameer Agarwal, Keir Mierle and Others
+
 - [website](http://ceres-solver.org)
 
 ### 2. Photometric Bundle Adjustment for Dense Multi-View 3D Modeling (CVPR'14)
