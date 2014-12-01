@@ -6,3 +6,4 @@ add_definitions("-std=c++11")
 
 add_subdirectory(pba)
 add_subdirectory(viewer)
+add_subdirectory(warp3d)

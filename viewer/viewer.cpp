@@ -18,7 +18,7 @@
 #include <iostream>
 
 struct AppSettings {
-   //std::string depthmap;
+   std::string depthmap;
    std::string image;
    std::string scene;
 };
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
   _setup_settings(argc, argv);
 
   std::cout << "Image name: " << _conf().image << "\n";
-  //std::cout << "Depthmap name: " << _conf().depthmap << "\n";
+  std::cout << "Depthmap name: " << _conf().depthmap << "\n";
 
   mve::Scene::Ptr scene = mve::Scene::create();
   scene->load_scene(_conf().scene);
@@ -42,25 +42,25 @@ int main(int argc, char* argv[])
       continue;
 
     mve::ByteImage::Ptr img = view->get_byte_image(_conf().image);
-    if (img == NULL) {
-      std::cout << "img is null\n";
+    if (img == NULL)
       continue;
-    }
 
-    //mve::FloatImage::Ptr dmap = view->get_float_image(_conf().depthmap);
-    //if (dmap == NULL)
-    //  continue;
+    mve::FloatImage::Ptr dmap = view->get_float_image(_conf().depthmap);
+    if (dmap == NULL)
+      continue;
 
     const mve::CameraInfo& cam = view->get_camera();
 
-    cv::Mat mveimg(img->height(), img->width(), CV_8UC3,
-                   img->get_byte_pointer());
     cv::Mat cvimg;
-    cv::cvtColor(mveimg, cvimg, cv::COLOR_RGB2BGR);
+    //cv::Mat mveimg(img->height(), img->width(), CV_8UC3,
+    //               img->get_byte_pointer());
+    //cv::cvtColor(mveimg, cvimg, cv::COLOR_RGB2BGR);
+    cvimg = cv::Mat(dmap->height(), dmap->width(), CV_32FC1,
+                    dmap->get_data_pointer());
     cv::imshow("view image", cvimg);
     cv::waitKey(0);
 
-    //dmap.reset();
+    dmap.reset();
     img.reset();
     view->cache_cleanup();
   }
@@ -83,7 +83,7 @@ static void _setup_settings(int argc, const char * const * argv)
   args.parse(argc, argv);
 
   AppSettings& conf = _conf();
-  //conf.depthmap = "depth-L0";
+  conf.depthmap = "depth-L0";
   conf.image = "undistored";
 
   // Scan Arguments
@@ -92,12 +92,12 @@ static void _setup_settings(int argc, const char * const * argv)
       continue;
 
     switch (arg->opt->sopt) {
-      //case 'd': conf.depthmap = arg->arg; break;
+      case 'd': conf.depthmap = arg->arg; break;
       case 'i': conf.image = arg->arg; break;
       case 'F':
         {
           int scale = arg->get_arg<int>();
-          //conf.depthmap = "depth-L" + util::string::get<int>(scale);
+          conf.depthmap = "depth-L" + util::string::get<int>(scale);
           conf.image = (scale == 0 ?
                         "undistored" :
                         "undist-L" + util::string::get<int>(scale));
@@ -118,4 +118,5 @@ static void _init_arguments(util::Arguments& args)
   args.set_usage("Usage: ph-bundle-adjust [ OPTS ] SCENE_DIR MESH_IN MESH_OUT");
   args.set_description("Perform Photometric Bundle Adjustment to Refine Mesh");
   args.add_option('i', "image", true, "Name of color image to use [undistorted]");
+  args.add_option('d', "depth", true, "Name of depth map to use [depth-L0]");
 }
