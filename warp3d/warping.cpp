@@ -9,6 +9,7 @@
 #include <ogl/mesh_renderer.h>
 #include <ogl/shader_program.h>
 #include <ogl/camera.h>
+#include <ogl/texture.h>
 
 #include <iostream>
 
@@ -42,7 +43,6 @@ void Warping::process(int view_id)
 {
   AppSettings& conf = AppSettings::instance();
   mve::Scene::Ptr scene = m_Scene;
-  //mve::TriangleMesh::Ptr mesh = m_Mesh;
 
   const mve::Scene::ViewList& views = scene->get_views();
 
@@ -71,23 +71,31 @@ void Warping::process(int view_id)
   ref_view->cache_cleanup();
 }
 
-const char* DepthPassVertCode = 
+const char* WarpPassVertCode = 
 "#version 330 core\n"
 "in vec4 pos;\n"
-"uniform mat4 viewmat;\n"
-"uniform mat4 projmat;\n"
+"out vec4 position;\n"
+"//uniform mat4 viewmat;\n"
+"//uniform mat4 projmat;\n"
 "void main()\n"
 "{\n"
-"  gl_Position = projmat * (viewmat * pos);\n"
+"  position = pos;\n"
+"  //gl_Position = projmat * (viewmat * pos);\n"
+"  gl_Position = pos;\n"
 "}\n"
 ;
 
-const char* DepthPassFragCode =
+const char* WarpPassFragCode =
 "#version 330 core\n"
+"in vec4 position;\n"
+"uniform sampler2D view_tex;\n"
+"out vec4 color;\n"
 "void main()\n"
 "{\n"
+"  color = texture(view_tex, position.xy);\n"
 "}\n"
 ;
+// TODO: position -> another camera view -> read texel
 
 mve::ByteImage::Ptr Warping::warp(mve::View::Ptr view,
                                   mve::View::Ptr ref_view)
@@ -97,67 +105,67 @@ mve::ByteImage::Ptr Warping::warp(mve::View::Ptr view,
     return mve::ByteImage::Ptr();
   mve::ByteImage::Ptr ref_img = ref_view->get_byte_image(m_ImageName);
 
-  //mve::FloatImage::Ptr dmap = view->get_float_image(m_DepthMapName);
-  //if (dmap == NULL)
-  //  return mve::ByteImage::Ptr();
-
   //mve::TriangleMesh::Ptr mesh = m_Mesh;
+  auto mesh = mve::TriangleMesh::create();
+  {
+    auto vert = mesh->get_vertices();
+    vert.push_back(math::Vec3f(1.0, 1.0, 0.0));
+    vert.push_back(math::Vec3f(-1.0, 1.0, 0.0));
+    vert.push_back(math::Vec3f(-1.0, -1.0, 0.0));
+    vert.push_back(math::Vec3f(1.0, -1.0, 0.0));
+    auto face = mesh->get_faces();
+    face.push_back(0);
+    face.push_back(1);
+    face.push_back(2);
+    face.push_back(2);
+    face.push_back(3);
+    face.push_back(0);
+  }
+
   auto mesh_renderer = ogl::MeshRenderer::create();
-  mesh_renderer->set_mesh(m_Mesh);
+  mesh_renderer->set_mesh(mesh);
 
   const mve::CameraInfo& cam = view->get_camera();
   const mve::CameraInfo& ref_cam = ref_view->get_camera();
   int width = ref_img->width(), height = ref_img->height();
 
-  
-
-  auto depth_program = ogl::ShaderProgram::create();
-  depth_program->load_vert_code(DepthPassVertCode);
-  depth_program->load_frag_code(DepthPassFragCode);
   auto warp_program = ogl::ShaderProgram::create();
+  warp_program->load_vert_code(WarpPassVertCode);
+  warp_program->load_frag_code(WarpPassFragCode);
 
-  GLuint depth_tex, depth_fbo, warp_tex, warp_fbo;
-  glGenTextures(1, &depth_tex);
-  glGenTextures(1, &warp_tex);
-  glGenFramebuffers(1, &depth_fbo);
-  glGenFramebuffers(1, &warp_fbo);
-  glBindTexture(GL_TEXTURE_2D, depth_tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0,
-               GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, NULL);
-  glBindTexture(GL_TEXTURE_2D, warp_tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
-               GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, NULL);
-  glBindFramebuffer(GL_FRAMEBUFFER, depth_fbo);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_tex, 0);
-  glBindFramebuffer(GL_FRAMEBUFFER, warp_fbo);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, warp_tex, 0);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  auto view_tex = ogl::Texture::create();
+  view_tex->upload(img);
 
-  // TODO: Generate Depth Map
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, depth_fbo);
-  glViewport(0, 0, width, height);
-  glDrawBuffer(GL_NONE);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  depth_program->bind();
-  depth_program->send_uniform();
-  mesh_renderer->set_shader(depth_program);
+  //GLuint warp_tex, warp_fbo, depth_rbo;
+  //glGenTextures(1, &warp_tex);
+  //glGenFramebuffers(1, &warp_fbo);
+  //glGenRenderbuffers(1, &depth_rbo);
+  //glBindTexture(GL_TEXTURE_2D, warp_tex);
+  //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+  //             GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, NULL);
+  //glBindFramebuffer(GL_FRAMEBUFFER, warp_fbo);
+  //glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, warp_tex, 0);
+  //glFramebufferRenderbuffer(GL_FRAMEBUFFER, )
+  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   // TODO: 3D warping
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, warp_fbo);
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
-  glBindTexture(GL_TEXTURE_2D, depth_tex);
+  //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, warp_fbo);
+  //glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  view_tex->bind();
+  mesh_renderer->set_shader(warp_program);
+  mesh_renderer->draw();
 
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
+  //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  //glBindTexture(GL_TEXTURE_2D, 0);
   glFlush();
+
+  
 
   mve::ByteImage::Ptr registered_img = mve::ByteImage::create();
 
-  glDeleteTextures(1, &depth_tex);
-  glDeleteTextures(1, &warp_tex);
-  glDeleteFramebuffers(1, &depth_fbo);
-  glDeleteFramebuffers(1, &warp_fbo);
+  //glDeleteFramebuffers(1, &warp_fbo);
+  //glDeleteTextures(1, &warp_tex);
+  //glDeleteRenderbuffers(1, &depth_rbo);
 
   return registered_img;
 }
