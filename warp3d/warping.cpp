@@ -118,21 +118,6 @@ mve::ByteImage::Ptr Warping::warp(mve::View::Ptr view,
 
   // OpenGL
   mve::TriangleMesh::Ptr mesh = m_Mesh;
-  //auto mesh = mve::TriangleMesh::create();
-  if (0) {
-    auto vert = mesh->get_vertices();
-    vert.push_back(math::Vec3f(1.0, 1.0, 0.0));
-    vert.push_back(math::Vec3f(-1.0, 1.0, 0.0));
-    vert.push_back(math::Vec3f(-1.0, -1.0, 0.0));
-    vert.push_back(math::Vec3f(1.0, -1.0, 0.0));
-    auto face = mesh->get_faces();
-    face.push_back(0);
-    face.push_back(1);
-    face.push_back(2);
-    face.push_back(2);
-    face.push_back(3);
-    face.push_back(0);
-  }
   auto mesh_renderer = ogl::MeshRenderer::create(mesh);
   auto program = ogl::ShaderProgram::create();
   program->load_vert_code(WarpPassVertCode);
