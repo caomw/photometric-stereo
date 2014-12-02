@@ -11,6 +11,14 @@
 int main(int argc, char* argv[])
 {
   AppSettings& conf = AppSettings::initialize(argc, argv);
+  glutInit(&argc, argv);
+
+  unsigned int mode = GLUT_RGBA | GLUT_DOUBLE;
+#ifdef __APPLE__
+  mode |= GLUT_3_2_CORE_PROFILE;
+#endif
+  glutInitDisplayMode(mode);
+  glutCreateWindow("warp3d");
 
   Warping warping;
   warping.process();
