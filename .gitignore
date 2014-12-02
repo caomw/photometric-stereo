@@ -1,6 +1,9 @@
 # Ignore temporary dir
 tmp/
 
+# Ignore Python Bytecode Files
+*.pyc
+
 # Ignore system generated files
 .DS_Store
 *.swp
