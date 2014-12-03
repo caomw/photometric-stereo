@@ -33,10 +33,18 @@ WIDTH, HEIGHT = REF_IMG.shape[1], REF_IMG.shape[0]
 print('Ref Image Dim = (' + str(WIDTH) + ', ' + str(HEIGHT) + ')')
 VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 
+ZNEAR, ZFAR = 0.1, 500.0
+
 REF_CAM = REF_VIEW.camera
-view_mat = numpy.identity(4, dtype=numpy.float32)
-view_mat[0:3, 3] = -REF_CAM.translation_vector
+#view_mat = numpy.identity(4, dtype=numpy.float32)
+#view_mat[0:3, 3] = -REF_CAM.translation_vector
+#view_mat[0:3, 3] = [ 0.0, 0.0, -10.0 ]
+view_mat = REF_CAM.cam_to_world_matrix
 proj_mat = numpy.identity(4, dtype=numpy.float32)
+aspect = float(WIDTH) / float(HEIGHT)
+proj_mat[0, 0] = 1.0 / aspect
+proj_mat[2, 2:4] = [2.0/(ZNEAR-ZFAR), (ZNEAR+ZFAR)/(ZNEAR-ZFAR)]
+proj_mat[3, :] = [0, 0, -1, 0]
 REF_TRANSFORM_MATRIX = numpy.dot(proj_mat, view_mat)
 print(REF_TRANSFORM_MATRIX)
 
@@ -62,15 +70,15 @@ fdata = map(lambda x: numpy.frombuffer(x, dtype=numpy.uint32), fdata)
 fdata = numpy.ravel(fdata)
 VERTEX_DATA = numpy.frombuffer(vdata, dtype=numpy.float32)
 INDEX_DATA = numpy.frombuffer(fdata, dtype=numpy.uint32)
-VERTEX_DATA = numpy.array([
-  1.0, 1.0, 0.0,
-  -1.0, 1.0, 0.0,
-  -1.0, -1.0, 0.0,
-  1.0, -1.0, 0.0
-], dtype=numpy.float32)
-INDEX_DATA = numpy.array([
-  0, 1, 2, 2, 3, 0
-], dtype=numpy.uint32)
+#VERTEX_DATA = numpy.array([
+#  1.0, 1.0, 0.0,
+#  -1.0, 1.0, 0.0,
+#  -1.0, -1.0, 0.0,
+#  1.0, -1.0, 0.0
+#], dtype=numpy.float32)
+#INDEX_DATA = numpy.array([
+#  0, 1, 2, 2, 3, 0
+#], dtype=numpy.uint32)
 VERTEX_BUFFER, INDEX_BUFFER = glGenBuffers(2)
 glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER)
 glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA, GL_STATIC_DRAW)
@@ -159,6 +167,7 @@ for view in VIEWS:
     glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_CULL_FACE)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
     glFlush()
     
