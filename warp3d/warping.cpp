@@ -86,8 +86,8 @@ const char* WarpPassVertCode =
   "void main()\n"
   "{\n"
   "  position = pos;\n"
-  "  //gl_Position = ref_projmat * (ref_viewmat * pos);\n"
-  "  gl_Position = pos;\n"
+  "  gl_Position = ref_projmat * (ref_viewmat * pos);\n"
+  "  //gl_Position = pos;\n"
   "}\n"
 ;
 
@@ -96,11 +96,12 @@ const char* WarpPassFragCode =
   "in vec4 position;\n"
   "uniform sampler2D view_tex;\n"
   "uniform mat4 viewmat;\n"
-  "uniform mat4 projmat;\n"
+  "uniform mat4 ref_projmat;\n"
   "layout(location=0) out vec4 color;\n"
   "void main()\n"
   "{\n"
-  "  color = texture(view_tex, position.xy);\n"
+  "  //color = texture(view_tex, position.xy);\n"
+  "  color = vec4(1.0, 0.0, 0.0, 1.0);\n"
   "}\n"
 ;
 
@@ -115,6 +116,7 @@ mve::ByteImage::Ptr Warping::warp(mve::View::Ptr view,
   const mve::CameraInfo& cam = view->get_camera();
   const mve::CameraInfo& ref_cam = ref_view->get_camera();
   int width = ref_img->width(), height = ref_img->height();
+  ref_cam.debug_print();
 
   // OpenGL
   mve::TriangleMesh::Ptr mesh = m_Mesh;
@@ -124,6 +126,43 @@ mve::ByteImage::Ptr Warping::warp(mve::View::Ptr view,
   program->load_frag_code(WarpPassFragCode);
   program->bind();
   program->send_uniform("view_tex", 0);
+  {
+    float mat[16], pos[3];
+    ref_cam.fill_camera_pos(pos);
+    //ref_cam.fill_world_to_cam(mat);
+    mat[0] = 1.0f, mat[1] = 0.0f, mat[2] = 0.0f, mat[3] = -pos[0];
+    mat[4] = 0.0f, mat[5] = 1.0f, mat[6] = 0.0f, mat[7] = -pos[1];
+    mat[8] = 0.0f, mat[9] = 0.0f, mat[10] = 1.0f, mat[11] = -pos[2];
+    mat[12] = 0.0f, mat[13] = 0.0f, mat[14] = 0.0f, mat[15] = 1.0f;
+    //ref_cam.fill_cam_to_world(mat);
+    program->send_uniform("ref_viewmat", math::Matrix4f(mat));
+  }
+  {
+    float dim_aspect = width / height;
+    float image_aspect = dim_aspect * ref_cam.paspect;
+    float ax, ay;
+    if (image_aspect < 1.0f) /* Portrait. */ {
+      ax = ref_cam.flen * height / ref_cam.paspect;
+      ay = ref_cam.flen * height;
+    } else /* Landscape. */ {
+      ax = ref_cam.flen * width;
+      ay = ref_cam.flen * width * ref_cam.paspect;
+    }
+    float znear = 0.1f, zfar = 500.0f;
+    math::Matrix4f mat(0.0f);
+    //mat(0, 0) = ax / width;
+    //std::cout << ax << "\n";
+    mat(0, 0) = 0.5f;
+    //mat(0, 2) = /* width */ ref_cam.ppoint[0];
+    //mat(1, 1) = ay / height;
+    mat(1, 1) = 0.5f;
+    //mat(1, 2) = /* height */ ref_cam.ppoint[1];
+    mat(2, 2) = -(zfar + znear) / (zfar - znear);
+    mat(2, 3) = -2.0f * zfar * znear / (zfar - znear);
+    mat(3,2) = -1;
+    //mat(2, 2) = 1.0f;
+    program->send_uniform("ref_projmat", mat);
+  }
   mesh_renderer->set_shader(program);
 
   auto view_tex = ogl::Texture::create();
