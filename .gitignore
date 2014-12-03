@@ -1,5 +1,6 @@
 # Ignore temporary dir
 tmp/
+build/
 
 # Ignore Python Bytecode Files
 *.pyc

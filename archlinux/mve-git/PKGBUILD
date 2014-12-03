@@ -1,0 +1,69 @@
+# Maintainer: David Lin <davll.xc@gmail.com>
+
+pkgname=mve-git
+pkgver=r740.76a1376
+pkgrel=1
+pkgdesc="Multi-View Environment"
+arch=(i686 x86_64)
+url="http://www.gris.tu-darmstadt.de/projects/multiview-environment/"
+license=(GPL)
+depends=(libjpeg libtiff libpng libgl)
+makedepends=(git)
+provides=(${pkgname%-*})
+source=($pkgname::git+https://github.com/simonfuhrmann/mve.git)
+sha256sums=('SKIP')
+sha512sums=('SKIP')
+options=(staticlibs)
+
+pkgver() {
+  cd $pkgname
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd $srcdir/$pkgname
+  make -j`nproc`
+  make -C apps/bundle2ply -j`nproc`
+  make -C apps/dmrecon -j`nproc`
+  make -C apps/makescene -j`nproc`
+  make -C apps/meshconvert -j`nproc`
+  make -C apps/mveshell -j`nproc`
+  make -C apps/scene2pset -j`nproc`
+  make -C apps/sfmrecon -j`nproc`
+}
+
+package() {
+  cd $startdir
+  install -D -m644 mve-config.cmake $pkgdir/usr/lib/cmake/Mve/mve-config.cmake
+
+  cd $srcdir/$pkgname
+  install -D -m644 Makefile.inc "$pkgdir/opt/mve/Makefile.inc"
+  install -D -m644 COPYING.txt $pkgdir/usr/share/licenses/$pkgname/LICENSE
+  
+  cd apps
+  install -D bundle2ply/bundle2ply "${pkgdir}/opt/mve/bin/bundle2ply"
+  install -D dmrecon/dmrecon "${pkgdir}/opt/mve/bin/dmrecon"
+  install -D makescene/makescene "${pkgdir}/opt/mve/bin/makescene"
+  install -D meshconvert/meshconvert "${pkgdir}/opt/mve/bin/meshconvert"
+  install -D mveshell/mveshell "${pkgdir}/opt/mve/bin/mveshell"
+  install -D scene2pset/scene2pset "${pkgdir}/opt/mve/bin/scene2pset"
+  install -D sfmrecon/sfmrecon "${pkgdir}/opt/mve/bin/sfmrecon"
+  
+  cd ../libs
+  for _h in `find . -name *.h`; do
+    install -D -m644 $_h "$pkgdir/opt/mve/libs/$_h"
+  done
+  for _a in `find . -name *.a`; do
+    install -D $_a "$pkgdir/opt/mve/libs/$_a"
+  done
+  
+  install -d "$pkgdir/usr/bin/"
+  cd $pkgdir/usr/bin
+  ln -s /opt/mve/bin/bundle2ply mve-bundle2ply
+  ln -s /opt/mve/bin/dmrecon mve-dmrecon
+  ln -s /opt/mve/bin/makescene mve-makescene
+  ln -s /opt/mve/bin/meshconvert mve-meshconvert
+  ln -s /opt/mve/bin/mveshell mve-mveshell
+  ln -s /opt/mve/bin/scene2pset mve-scene2pset
+  ln -s /opt/mve/bin/sfmrecon mve-sfmrecon
+}

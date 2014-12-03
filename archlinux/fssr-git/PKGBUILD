@@ -1,0 +1,58 @@
+# Maintainer: David Lin <davll.xc@gmail.com>
+
+pkgname=fssr-git
+pkgver=r30.d466d9a
+pkgrel=1
+pkgdesc="Floating Scale Surface Reconstruction"
+arch=(i686 x86_64)
+url="http://www.gris.informatik.tu-darmstadt.de/projects/floating-scale-surface-recon/"
+license=(GPL)
+depends=(mve)
+makedepends=(git)
+provides=(${pkgname%-*})
+source=(fssr::git+https://github.com/simonfuhrmann/fssr.git)
+sha256sums=('SKIP')
+sha512sums=('SKIP')
+options=(staticlibs)
+
+pkgver() {
+  cd fssr
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  ln -sfT /opt/mve $srcdir/mve
+  #cd $srcdir/fssr/apps
+  #sed 's#"MVE_ROOT :="#"MVE_ROOT ?="#' fssrecon/Makefile
+  #sed 's#"MVE_ROOT :="#"MVE_ROOT ?="#' mesh2pset/Makefile
+  #sed 's#"MVE_ROOT :="#"MVE_ROOT ?="#' meshalign/Makefile
+  #sed 's#"MVE_ROOT :="#"MVE_ROOT ?="#' meshclean/Makefile
+}
+
+build() {
+  cd $srcdir/fssr
+  make MVE_ROOT=/opt/mve -j`nproc`
+}
+
+package() {
+  cd $srcdir/fssr/apps
+  install -D fssrecon/fssrecon $pkgdir/opt/fssr/bin/fssrecon
+  install -D mesh2pset/mesh2pset $pkgdir/opt/fssr/bin/mesh2pset
+  install -D meshalign/meshalign $pkgdir/opt/fssr/bin/meshalign
+  install -D meshclean/meshclean $pkgdir/opt/fssr/bin/meshclean
+
+  cd ../libs
+  for _h in `find . -name *.h`; do
+    install -D -m644 $_h "$pkgdir/opt/fssr/libs/$_h"
+  done
+  for _a in `find . -name *.a`; do
+    install -D $_a "$pkgdir/opt/fssr/libs/$_a"
+  done
+
+  install -d $pkgdir/usr/bin
+  cd $pkgdir/usr/bin
+  ln -s /opt/fssr/bin/fssrecon fssr-recon
+  ln -s /opt/fssr/bin/mesh2pset fssr-mesh2pset
+  ln -s /opt/fssr/bin/meshalign fssr-meshalign
+  ln -s /opt/fssr/bin/meshclean fssr-meshclean
+}

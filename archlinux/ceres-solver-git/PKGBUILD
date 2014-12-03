@@ -1,0 +1,38 @@
+# Maintainer: David Lin <davll.xc@gmail.com>
+
+pkgname=ceres-solver-git
+pkgver=r829.19d7ce9
+pkgrel=1
+pkgdesc="Ceres Solver"
+arch=(i686 x86_64)
+url="http://ceres-solver.org"
+license=(GPL)
+depends=('eigen>=3.0.0'
+         'google-glog>=0.3.1'
+         suitesparse blas lapack)
+makedepends=(git cmake)
+provides=(ceres-solver)
+conflicts=(ceres-solver)
+source=($pkgname::git+https://ceres-solver.googlesource.com/ceres-solver)
+sha256sums=('SKIP')
+sha512sums=('SKIP')
+options=(staticlibs)
+
+pkgver() {
+  cd $pkgname
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd $srcdir/$pkgname
+  mkdir linux-build
+  cd linux-build
+  cmake -DGFLAGS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
+  make -j`nproc`
+}
+
+package() {
+  cd $srcdir/$pkgname/linux-build
+  make DESTDIR=$pkgdir install
+  install -Dm644 ../LICENSE $pkgdir/usr/share/licenses/$pkgname/LICENSE
+}
