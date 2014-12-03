@@ -3,6 +3,28 @@
 
 cimport base
 cimport util
+cimport numpy
+
+cdef class CameraInfo:
+    cdef base.CameraInfo obj
+    def __init__(self):
+        pass
+    def __dealloc__(self):
+        pass
+    property focal_length:
+        def __get__(self):
+            return self.obj.flen
+    property principal_point:
+        def __get__(self):
+            return (self.obj.ppoint[0], self.obj.ppoint[1])
+    property pixel_apsect:
+        def __get__(self):
+            return self.obj.paspect
+    property distortion_parameters:
+        def __get__(self):
+            return (self.obj.dist[0], self.obj.dist[1])
+    #property translation_vector:
+    #property rotation_matrix:
 
 cdef class View:
     cdef util.RefPtr[base.View] thisptr
@@ -20,6 +42,11 @@ cdef class View:
             return str(self.thisptr.get().get_name())
         def __set__(self, value):
             self.thisptr.get().set_name(value.encode());
+    property camera:
+        def __get__(self):
+            cam = CameraInfo()
+            cam.obj = self.thisptr.get().get_camera()
+            return cam
 
 cdef class Scene:
     cdef util.RefPtr[base.Scene] thisptr
@@ -32,7 +59,6 @@ cdef class Scene:
     property views:
         def __get__(self):
             n_views = self.thisptr.get().get_views()
-            #list(View(ptr) for ptr in n_views)
             views = []
             for ptr in n_views:
                 obj = View()

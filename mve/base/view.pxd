@@ -1,5 +1,6 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
+from base.camera_info cimport CameraInfo
 from util.ref_ptr cimport RefPtr
 from libcpp.string cimport string
 from libcpp.vector cimport vector
@@ -10,8 +11,8 @@ cdef extern from 'mve/view.h' namespace 'mve':
         size_t get_id()
         void set_name(string&)
         string& get_name()
-        #void set_camera(CameraInfo&)
-        #CameraInfo& get_camera()
+        void set_camera(CameraInfo&)
+        CameraInfo& get_camera()
         bint is_camera_valid()
         void clear()
         size_t cache_cleanup()
