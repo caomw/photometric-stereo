@@ -30,8 +30,21 @@ cdef class CameraInfo:
     property distortion_parameters:
         def __get__(self):
             return (self.obj.dist[0], self.obj.dist[1])
-    #property translation_vector:
-    #property rotation_matrix:
+    property translation_vector:
+        def __get__(self):
+            cdef float[:] t = self.obj.trans
+            arr = numpy.ndarray(shape=(3), dtype=numpy.float32)
+            for i in range(0,3):
+                arr[i] = t[i]
+            return arr
+    property rotation_matrix:
+        def __get__(self):
+            cdef float[:] r = self.obj.rot
+            arr = numpy.ndarray(shape=(3,3), dtype=numpy.float32, order='C')
+            for i in range(0,3):
+                for j in range(0,3):
+                    arr[i, j] = r[i * 3 + j]
+            return arr
 
 cdef _image2ndarray(RefPtr[CImageBase] image):
   cdef CImageBase* img = image.get()
