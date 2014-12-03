@@ -33,6 +33,11 @@ WIDTH, HEIGHT = REF_IMG.shape[1], REF_IMG.shape[0]
 print('Ref Image Dim = (' + str(WIDTH) + ', ' + str(HEIGHT) + ')')
 VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 
+REF_TRANSFORM_MATRIX = numpy.identity(4, dtype=numpy.float32)
+REF_TRANSFORM_MATRIX[0, 1] = 1
+REF_TRANSFORM_MATRIX[3, 3] = 2.0
+print(REF_TRANSFORM_MATRIX)
+
 # Initialize OpenGL
 from OpenGL.GL import *
 from OpenGL.arrays import vbo
@@ -83,10 +88,12 @@ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
 VertCode = """#version 330 core
 layout(location=0) in vec4 pos;
 out vec4 texcoord;
+uniform mat4 refTransform;
 void main()
 {
   texcoord = pos;
-  gl_Position = pos;
+  //gl_Position = pos;
+  gl_Position = refTransform * pos;
 }
 """
 FragCode = """#version 330 core
@@ -107,7 +114,7 @@ PROGRAM = shaders.compileProgram(
 # Create Texture
 VIEW_TEX, COLOR_TEX, DEPTH_TEX = glGenTextures(3)
 glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, REF_IMG)
+#glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, REF_IMG)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
 glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
@@ -124,10 +131,14 @@ glCheckFramebufferStatus(GL_FRAMEBUFFER)
 
 # Draw
 for view in VIEWS:
+    cam_transform_matrix = numpy.identity(4, dtype=numpy.float32)
+    
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
     img = view.get_image(ARGS.image)
     width, height = img.shape[1], img.shape[0]
+    # Because OpenGL Texture's origin is at left-bottom, not left-top
+    img = numpy.flipud(img)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
     
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FRAMEBUFFER)
@@ -136,6 +147,10 @@ for view in VIEWS:
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
     glUseProgram(PROGRAM)
     glUniform1i(glGetUniformLocation(PROGRAM, 'viewTex'), 0)
+    loc = glGetUniformLocation(PROGRAM, 'refTransform')
+    glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+    loc = glGetUniformLocation(PROGRAM, 'camTransform')
+    glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_CULL_FACE)
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
@@ -145,7 +160,10 @@ for view in VIEWS:
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
     glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
     output = glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, None)
-    RESULT = numpy.ndarray(shape=(HEIGHT,WIDTH,3), dtype=numpy.uint8, order='C', buffer=output)
+    output = numpy.ndarray(shape=(HEIGHT,WIDTH,3), dtype=numpy.uint8, order='C', buffer=output)
+    # Because the origin of OpenGL framebuffer is at left-bottom,
+    # It's required to vertically flip the result image
+    RESULT = numpy.flipud(output)
     cv2.imshow("Result", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
     cv2.waitKey(0)
 
