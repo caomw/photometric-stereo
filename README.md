@@ -27,8 +27,6 @@ by Boxin Shi, Kenji Inose, Yasuyuki Matsushita, Ping Tan, Sai-Kit Yeung, and Kat
 
 NumPy is the fundamental package for scientific computing with Python
 
-<script type="text/javascript" src="http://www.openhub.net/p/4894/widgets/project_partner_badge.js">
-</script>
-
 - [website](http://www.numpy.org)
-
+- [github](https://github.com/numpy/numpy)
+- [openhub](https://www.openhub.net/p/numpy)
