@@ -33,9 +33,11 @@ WIDTH, HEIGHT = REF_IMG.shape[1], REF_IMG.shape[0]
 print('Ref Image Dim = (' + str(WIDTH) + ', ' + str(HEIGHT) + ')')
 VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 
-REF_TRANSFORM_MATRIX = numpy.identity(4, dtype=numpy.float32)
-REF_TRANSFORM_MATRIX[0, 1] = 1
-REF_TRANSFORM_MATRIX[3, 3] = 2.0
+REF_CAM = REF_VIEW.camera
+view_mat = numpy.identity(4, dtype=numpy.float32)
+view_mat[0:3, 3] = -REF_CAM.translation_vector
+proj_mat = numpy.identity(4, dtype=numpy.float32)
+REF_TRANSFORM_MATRIX = numpy.dot(proj_mat, view_mat)
 print(REF_TRANSFORM_MATRIX)
 
 # Initialize OpenGL
@@ -89,10 +91,12 @@ VertCode = """#version 330 core
 layout(location=0) in vec4 pos;
 out vec4 texcoord;
 uniform mat4 refTransform;
+uniform mat4 camTransform;
 void main()
 {
-  texcoord = pos;
+  //texcoord = pos;
   //gl_Position = pos;
+  texcoord = camTransform * pos;
   gl_Position = refTransform * pos;
 }
 """
@@ -102,8 +106,9 @@ uniform sampler2D viewTex;
 layout(location=0) out vec4 color;
 void main()
 {
-  //color = vec4(1.0, 1.0, 0.0, 1.0);
-  color = texture(viewTex, texcoord.xy * 0.5 + vec2(0.5));
+  vec3 coord = texcoord.xyz / texcoord.w;
+  coord = coord * 0.5 + vec3(0.5);
+  color = texture(viewTex, coord.xy);
 }
 """
 PROGRAM = shaders.compileProgram(
@@ -132,6 +137,7 @@ glCheckFramebufferStatus(GL_FRAMEBUFFER)
 # Draw
 for view in VIEWS:
     cam_transform_matrix = numpy.identity(4, dtype=numpy.float32)
+    # TODO: Make a camera project & view matrix
     
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)

@@ -45,6 +45,25 @@ cdef class CameraInfo:
                 for j in range(0,3):
                     arr[i, j] = r[i * 3 + j]
             return arr
+    property world_to_cam_matrix:
+        def __get__(self):
+            cdef numpy.ndarray arr = numpy.zeros(shape=(4,4), dtype=numpy.float32, order='C')
+            self.obj.fill_world_to_cam(<float*>arr.data)
+            return arr
+    property cam_to_world_matrix:
+        def __get__(self):
+            cdef numpy.ndarray arr = numpy.zeros(shape=(4,4), dtype=numpy.float32, order='C')
+            self.obj.fill_cam_to_world(<float*>arr.data)
+            return arr
+    def calibration_matrix(self, width, height):
+        cdef numpy.ndarray arr = numpy.zeros(shape=(3,3), dtype=numpy.float32, order='C')
+        self.obj.fill_calibration(<float*>arr.data, width, height)
+        return arr
+    def inverse_calibration_matrix(self, width, height):
+        cdef numpy.ndarray arr = numpy.zeros(shape=(3,3), dtype=numpy.float32, order='C')
+        self.obj.fill_inverse_calibration(<float*>arr.data, width, height)
+        return arr
+
 
 cdef _image2ndarray(RefPtr[CImageBase] image):
   cdef CImageBase* img = image.get()
