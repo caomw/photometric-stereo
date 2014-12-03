@@ -1,3 +1,5 @@
+# cython: c_string_type=unicode, c_string_encoding=utf8
+
 cdef extern from 'util/ref_ptr.h' namespace 'util' nogil:
     cdef cppclass RefPtr[T]:
         RefPtr() except +
@@ -15,5 +17,3 @@ cdef extern from 'util/ref_ptr.h' namespace 'util' nogil:
         bint operator==(RefPtr&)
         bint operator!=(T*)
         bint operator!=(RefPtr&)
-
-

@@ -1,22 +1,21 @@
 # distutils: language = c++
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
-from libcpp.string cimport string
-from libcpp.vector cimport vector
-from util cimport RefPtr
+cimport base
+cimport util
 
-cdef extern from 'mve/scene.h' namespace 'mve':
-    cdef cppclass Scene:
-        void load_scene(string)
-        @staticmethod
-        RefPtr[Scene] create()
-
-cdef class PyScene:
-    cdef RefPtr[Scene] thisptr
+cdef class Scene:
+    cdef util.RefPtr[base.Scene] thisptr
     def __init__(self):
-        self.thisptr = Scene.create()
+        self.thisptr = base.Scene.create()
     def __dealloc__(self):
         self.thisptr.reset()
     def load(self, path):
         self.thisptr.get().load_scene(path)
+
+cdef class View:
+    pass
+
+cdef class CameraInfo:
+    pass
 
