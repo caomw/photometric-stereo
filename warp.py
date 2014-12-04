@@ -97,11 +97,11 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_DATA, GL_STATIC_DRAW)
 NUM_ELEMENTS = len(INDEX_DATA)
 CONE_DATA = numpy.array([
     0.0, 0.0, 0.0,
-    0.5, 0.5, -1.0,
-    -0.5, 0.5, -1.0,
+    0.5, 0.5, 1.0,
+    -0.5, 0.5, 1.0,
     0.0, 0.0, 0.0,
-    0.5, -0.5, -1.0,
-    -0.5, -0.5, -1.0,
+    0.5, -0.5, 1.0,
+    -0.5, -0.5, 1.0,
     0.0, 0.0, 0.0
 ], dtype=numpy.float32)
 glBindBuffer(GL_ARRAY_BUFFER, CONE_BUFFER)
@@ -202,6 +202,8 @@ for view in VIEWS:
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
     img = view.get_image(ARGS.image)
+    if img is None:
+        continue
     width, height = img.shape[1], img.shape[0]
     # Because OpenGL Texture's origin is at left-bottom, not left-top
     img = numpy.flipud(img)
