@@ -39,11 +39,14 @@ REF_CAM = REF_VIEW.camera
 #view_mat = numpy.identity(4, dtype=numpy.float32)
 #view_mat[0:3, 3] = -REF_CAM.translation_vector
 #view_mat[0:3, 3] = [ 0.0, 0.0, -10.0 ]
-view_mat = REF_CAM.cam_to_world_matrix
+view_mat = REF_CAM.world_to_cam_matrix
+print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 0, 1]))
+print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 1, 0]))
+print(REF_CAM.viewing_direction)
 proj_mat = numpy.identity(4, dtype=numpy.float32)
 aspect = float(WIDTH) / float(HEIGHT)
 proj_mat[0, 0] = 1.0 / aspect
-proj_mat[2, 2:4] = [2.0/(ZNEAR-ZFAR), (ZNEAR+ZFAR)/(ZNEAR-ZFAR)]
+proj_mat[2, 2:4] = [(ZNEAR+ZFAR)/(ZNEAR-ZFAR), (2*ZNEAR*ZFAR)/(ZNEAR-ZFAR)]
 proj_mat[3, :] = [0, 0, -1, 0]
 REF_TRANSFORM_MATRIX = numpy.dot(proj_mat, view_mat)
 print(REF_TRANSFORM_MATRIX)
@@ -144,8 +147,21 @@ glCheckFramebufferStatus(GL_FRAMEBUFFER)
 
 # Draw
 for view in VIEWS:
+    cam = view.camera
     cam_transform_matrix = numpy.identity(4, dtype=numpy.float32)
     # TODO: Make a camera project & view matrix
+    
+    view_mat = cam.world_to_cam_matrix
+    print(numpy.dot(cam.cam_to_world_matrix, [0, 0, 0, 1]))
+    print(numpy.dot(cam.cam_to_world_matrix, [0, 0, 1, 0]))
+    print(cam.viewing_direction)
+    proj_mat = numpy.identity(4, dtype=numpy.float32)
+    aspect = float(WIDTH) / float(HEIGHT)
+    proj_mat[0, 0] = 1.0 / aspect
+    proj_mat[2, 2:4] = [(ZNEAR+ZFAR)/(ZNEAR-ZFAR), (2*ZNEAR*ZFAR)/(ZNEAR-ZFAR)]
+    proj_mat[3, :] = [0, 0, -1, 0]
+    REF_TRANSFORM_MATRIX = numpy.dot(proj_mat, view_mat)
+    print(REF_TRANSFORM_MATRIX)
     
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)

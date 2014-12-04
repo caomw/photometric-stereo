@@ -55,6 +55,11 @@ cdef class CameraInfo:
             cdef numpy.ndarray arr = numpy.zeros(shape=(4,4), dtype=numpy.float32, order='C')
             self.obj.fill_cam_to_world(<float*>arr.data)
             return arr
+    property viewing_direction:
+        def __get__(self):
+            cdef float vec[3]
+            self.obj.fill_viewing_direction(vec)
+            return (vec[0], vec[1], vec[2])
     def calibration_matrix(self, width, height):
         cdef numpy.ndarray arr = numpy.zeros(shape=(3,3), dtype=numpy.float32, order='C')
         self.obj.fill_calibration(<float*>arr.data, width, height)

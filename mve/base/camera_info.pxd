@@ -11,11 +11,13 @@ cdef extern from 'mve/camera.h' namespace 'mve':
         float dist[2]
         float trans[3]
         float rot[9]
+        void fill_camera_pos(float*)
+        void fill_camera_translation(float*)
+        void fill_viewing_direction(float*)
         void fill_calibration(float*, float, float)
         void fill_inverse_calibration(float*, float, float)
         void fill_cam_to_world(float*)
         void fill_world_to_cam(float*)
-        void fill_viewing_direction(float*)
         void fill_reprojection(CameraInfo&, float, float, float, float, float*, float*)
         string to_ext_string()
         void from_ext_string(string&)
