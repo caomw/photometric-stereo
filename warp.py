@@ -89,20 +89,36 @@ INDEX_DATA = numpy.frombuffer(fdata, dtype=numpy.uint32)
 #INDEX_DATA = numpy.array([
 #  0, 1, 2, 2, 3, 0
 #], dtype=numpy.uint32)
-VERTEX_BUFFER, INDEX_BUFFER = glGenBuffers(2)
+VERTEX_BUFFER, INDEX_BUFFER, CONE_BUFFER = glGenBuffers(3)
 glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER)
 glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA, GL_STATIC_DRAW)
 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
 glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_DATA, GL_STATIC_DRAW)
 NUM_ELEMENTS = len(INDEX_DATA)
+CONE_DATA = numpy.array([
+    0.0, 0.0, 0.0,
+    0.5, 0.5, -1.0,
+    -0.5, 0.5, -1.0,
+    0.0, 0.0, 0.0,
+    0.5, -0.5, -1.0,
+    -0.5, -0.5, -1.0,
+    0.0, 0.0, 0.0
+], dtype=numpy.float32)
+glBindBuffer(GL_ARRAY_BUFFER, CONE_BUFFER)
+glBufferData(GL_ARRAY_BUFFER, CONE_DATA, GL_STATIC_DRAW)
+CONE_NUM_ELEMENTS = len(CONE_DATA)/3
 
 # Create VAO
-VERTEX_ARRAY = glGenVertexArrays(1)
+VERTEX_ARRAY, CONE_ARRAY = glGenVertexArrays(2)
 glBindVertexArray(VERTEX_ARRAY)
 glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER)
 glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
+glBindVertexArray(CONE_ARRAY)
+glBindBuffer(GL_ARRAY_BUFFER, CONE_BUFFER)
+glEnableVertexAttribArray(0)
+glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 
 # Create Program
 VertCode = """#version 330 core
@@ -132,6 +148,26 @@ void main()
 PROGRAM = shaders.compileProgram(
   shaders.compileShader(VertCode, GL_VERTEX_SHADER),
   shaders.compileShader(FragCode, GL_FRAGMENT_SHADER)
+)
+
+ConeVertCode = """#version 330 core
+layout(location=0) in vec4 pos;
+uniform mat4 refTransform;
+void main()
+{
+  gl_Position = refTransform * pos;
+}
+"""
+ConeFragCode = """#version 330 core
+layout(location=0) out vec4 color;
+void main()
+{
+  color = vec4(1.0, 1.0, 0.0, 1.0);
+}
+"""
+CONE_PROGRAM = shaders.compileProgram(
+  shaders.compileShader(ConeVertCode, GL_VERTEX_SHADER),
+  shaders.compileShader(ConeFragCode, GL_FRAGMENT_SHADER)
 )
 
 # Create Texture
@@ -172,16 +208,24 @@ for view in VIEWS:
     glViewport(0, 0, WIDTH, HEIGHT)
     glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
-    glUseProgram(PROGRAM)
-    glUniform1i(glGetUniformLocation(PROGRAM, 'viewTex'), 0)
-    loc = glGetUniformLocation(PROGRAM, 'refTransform')
-    glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
-    loc = glGetUniformLocation(PROGRAM, 'camTransform')
-    glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_CULL_FACE)
     #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-    glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
+    if True:
+        glBindVertexArray(VERTEX_ARRAY)
+        glUseProgram(PROGRAM)
+        glUniform1i(glGetUniformLocation(PROGRAM, 'viewTex'), 0)
+        loc = glGetUniformLocation(PROGRAM, 'refTransform')
+        glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+        loc = glGetUniformLocation(PROGRAM, 'camTransform')
+        glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
+        glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
+    if True:
+        glBindVertexArray(CONE_ARRAY)
+        glUseProgram(CONE_PROGRAM)
+        loc = glGetUniformLocation(CONE_PROGRAM, 'refTransform')
+        glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+        glDrawArrays(GL_LINE_STRIP, 0, CONE_NUM_ELEMENTS)
     glFlush()
     
     # Readback Result
@@ -197,7 +241,8 @@ for view in VIEWS:
 
 # Cleanup
 glDeleteProgram(PROGRAM)
-glDeleteVertexArrays(1, [VERTEX_ARRAY])
+glDeleteProgram(CONE_PROGRAM)
+glDeleteVertexArrays(2, [VERTEX_ARRAY, CONE_ARRAY])
 glDeleteFramebuffers(1, [FRAMEBUFFER])
-glDeleteBuffers(2, [VERTEX_BUFFER, INDEX_BUFFER])
+glDeleteBuffers(3, [VERTEX_BUFFER, INDEX_BUFFER, CONE_BUFFER])
 glDeleteTextures([VIEW_TEX, COLOR_TEX, DEPTH_TEX])
