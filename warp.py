@@ -224,7 +224,8 @@ for view in VIEWS:
         glBindVertexArray(CONE_ARRAY)
         glUseProgram(CONE_PROGRAM)
         loc = glGetUniformLocation(CONE_PROGRAM, 'refTransform')
-        glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+        mat = numpy.dot(REF_TRANSFORM_MATRIX, cam.cam_to_world_matrix)
+        glUniformMatrix4fv(loc, 1, GL_TRUE, mat)
         glDrawArrays(GL_LINE_STRIP, 0, CONE_NUM_ELEMENTS)
     glFlush()
     
