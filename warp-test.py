@@ -36,31 +36,35 @@ VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 ZNEAR, ZFAR = 0.1, 500.0
 
 REF_CAM = REF_VIEW.camera
-#world_mat = numpy.array([
-#    [1.0, 0.0, 0.0, 0.0],
-#    [0.0, -1.0, 0.0, 0.0],
-#    [0.0, 0.0, -1.0, 0.0],
-#    [0.0, 0.0, 0.0, 1.0]
-#], dtype=numpy.float32)
-#view_mat = numpy.array([
-#    [1.0, 0.0, 0.0, 0.0],
-#    [0.0, 1.0, 0.0, 0.0],
-#    [0.0, 0.0, 1.0, -10.0],
-#    [0.0, 0.0, 0.0, 1.0]
-#], dtype=numpy.float32)
-#view_mat = numpy.dot(view_mat, world_mat)
-view_mat = REF_CAM.world_to_cam_matrix
-#proj_mat = numpy.identity(4, dtype=numpy.float32)
-#aspect = float(WIDTH) / float(HEIGHT)
-#proj_mat[0, 0] = 1.0 / aspect
-#proj_mat[2, 2:4] = [(ZNEAR+ZFAR)/(ZNEAR-ZFAR), (2*ZNEAR*ZFAR)/(ZNEAR-ZFAR)]
-#proj_mat[3, :] = [0, 0, -1, 0]
-proj_mat = numpy.zeros(shape=(4,4), dtype=numpy.float32)
-proj_mat[0:3,0:3] = REF_CAM.calibration_matrix(WIDTH, HEIGHT)
-proj_mat[2,2:4] = [(ZNEAR+ZFAR)/(ZFAR-ZNEAR), (-2*ZNEAR*ZFAR)/(ZFAR-ZNEAR)]
-proj_mat[3,:] = [0, 0, 1, 0]
-proj_mat[0,:] *= 1.0 / float(WIDTH)
-proj_mat[1,:] *= 1.0 / float(HEIGHT)
+#view_mat = numpy.identity(4, dtype=numpy.float32)
+#view_mat[0:3, 3] = -REF_CAM.translation_vector
+#view_mat[0:3, 3] = [ 0.0, 0.0, -10.0 ]
+world_mat = numpy.array([
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, -1.0, 0.0, 0.0],
+    [0.0, 0.0, -1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0]
+], dtype=numpy.float32)
+view_mat = numpy.array([
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, -10.0],
+    [0.0, 0.0, 0.0, 1.0]
+], dtype=numpy.float32)
+view_mat = numpy.dot(view_mat, world_mat)
+#view_mat = REF_CAM.world_to_cam_matrix
+#view_mat = REF_CAM.cam_to_world_matrix
+#correction_mat = numpy.identity(4, dtype=numpy.float32)
+#correction_mat[3,3] = 1
+#view_mat = numpy.dot(correction_mat, REF_CAM.world_to_cam_matrix)
+#print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 0, 1]))
+#print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 1, 0]))
+#print(REF_CAM.viewing_direction)
+proj_mat = numpy.identity(4, dtype=numpy.float32)
+aspect = float(WIDTH) / float(HEIGHT)
+proj_mat[0, 0] = 1.0 / aspect
+proj_mat[2, 2:4] = [(ZNEAR+ZFAR)/(ZNEAR-ZFAR), (2*ZNEAR*ZFAR)/(ZNEAR-ZFAR)]
+proj_mat[3, :] = [0, 0, -1, 0]
 REF_TRANSFORM_MATRIX = numpy.dot(proj_mat, view_mat)
 #print(REF_TRANSFORM_MATRIX)
 
@@ -145,13 +149,7 @@ void main()
   //texcoord = pos;
   //gl_Position = pos;
   texcoord = camTransform * pos;
-  vec4 proj_pos = refTransform * pos;
-  float w = proj_pos.w;
-  vec2 xy = proj_pos.xy;
-  xy.y = w - xy.y;
-  xy = (2.0 * xy) - vec2(w);
-  proj_pos.xy = xy;
-  gl_Position = proj_pos;
+  gl_Position = refTransform * pos;
 }
 """
 FragCode = """#version 330 core
@@ -200,8 +198,6 @@ glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
 #glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, REF_IMG)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
 glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
 glBindTexture(GL_TEXTURE_2D, DEPTH_TEX)
@@ -234,7 +230,7 @@ for view in VIEWS:
     proj_mat[3,:] = [0, 0, 1, 0]
     proj_mat[0,:] *= 1.0 / float(width)
     proj_mat[1,:] *= 1.0 / float(height)
-    #print(proj_mat)
+    print(proj_mat)
     cam_transform_matrix = numpy.dot(proj_mat, view_mat)
     
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FRAMEBUFFER)
@@ -253,7 +249,7 @@ for view in VIEWS:
         loc = glGetUniformLocation(PROGRAM, 'camTransform')
         glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
         glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
-    if False:
+    if True:
         glBindVertexArray(CONE_ARRAY)
         glUseProgram(CONE_PROGRAM)
         loc = glGetUniformLocation(CONE_PROGRAM, 'refTransform')
