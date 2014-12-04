@@ -152,17 +152,20 @@ PROGRAM = shaders.compileProgram(
 
 ConeVertCode = """#version 330 core
 layout(location=0) in vec4 pos;
+out vec4 color;
 uniform mat4 refTransform;
 void main()
 {
+  color = mix(vec4(1.0), vec4(1.0, 0.0, 0.0, 0.0), abs(pos.z));
   gl_Position = refTransform * pos;
 }
 """
 ConeFragCode = """#version 330 core
-layout(location=0) out vec4 color;
+layout(location=0) out vec4 FragColor;
+in vec4 color;
 void main()
 {
-  color = vec4(1.0, 1.0, 0.0, 1.0);
+  FragColor = color;
 }
 """
 CONE_PROGRAM = shaders.compileProgram(
