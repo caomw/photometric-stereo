@@ -36,13 +36,29 @@ VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 ZNEAR, ZFAR = 0.1, 500.0
 
 REF_CAM = REF_VIEW.camera
-view_mat = numpy.identity(4, dtype=numpy.float32)
+#view_mat = numpy.identity(4, dtype=numpy.float32)
 #view_mat[0:3, 3] = -REF_CAM.translation_vector
-view_mat[0:3, 3] = [ 0.0, 0.0, -10.0 ]
+#view_mat[0:3, 3] = [ 0.0, 0.0, -10.0 ]
+world_mat = numpy.array([
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, -1.0, 0.0, 0.0],
+    [0.0, 0.0, -1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0]
+], dtype=numpy.float32)
+view_mat = numpy.array([
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, -10.0],
+    [0.0, 0.0, 0.0, 1.0]
+], dtype=numpy.float32)
+view_mat = numpy.dot(view_mat, world_mat)
 #view_mat = REF_CAM.world_to_cam_matrix
 #view_mat = REF_CAM.cam_to_world_matrix
-print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 0, 1]))
-print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 1, 0]))
+#correction_mat = numpy.identity(4, dtype=numpy.float32)
+#correction_mat[3,3] = 1
+#view_mat = numpy.dot(correction_mat, REF_CAM.world_to_cam_matrix)
+#print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 0, 1]))
+#print(numpy.dot(REF_CAM.cam_to_world_matrix, [0, 0, 1, 0]))
 #print(REF_CAM.viewing_direction)
 proj_mat = numpy.identity(4, dtype=numpy.float32)
 aspect = float(WIDTH) / float(HEIGHT)
@@ -65,30 +81,32 @@ def display():
 glutDisplayFunc(display)
 
 # Create VBO
-data = PlyData.read(ARGS.mesh)
-vdata = data['vertex'].data
-vdata = (vdata['x'], vdata['y'], vdata['z'])
-vmax = tuple(numpy.amax(vdata[i]) for i in range(0,3))
-vmin = tuple(numpy.amin(vdata[i]) for i in range(0,3))
-vmean = tuple(numpy.mean(vdata[i]) for i in range(0,3))
-print(vmax)
-print(vmin)
-print(vmean)
-vdata = numpy.transpose(vdata).flatten()
-fdata = data['face'].data['vertex_indices']
-fdata = map(lambda x: numpy.frombuffer(x, dtype=numpy.uint32), fdata)
-fdata = numpy.ravel(fdata)
-VERTEX_DATA = numpy.frombuffer(vdata, dtype=numpy.float32)
-INDEX_DATA = numpy.frombuffer(fdata, dtype=numpy.uint32)
-#VERTEX_DATA = numpy.array([
-#  1.0, 1.0, 0.0,
-#  -1.0, 1.0, 0.0,
-#  -1.0, -1.0, 0.0,
-#  1.0, -1.0, 0.0
-#], dtype=numpy.float32)
-#INDEX_DATA = numpy.array([
-#  0, 1, 2, 2, 3, 0
-#], dtype=numpy.uint32)
+if True:
+    data = PlyData.read(ARGS.mesh)
+    vdata = data['vertex'].data
+    vdata = (vdata['x'], vdata['y'], vdata['z'])
+    #vmax = tuple(numpy.amax(vdata[i]) for i in range(0,3))
+    #vmin = tuple(numpy.amin(vdata[i]) for i in range(0,3))
+    #vmean = tuple(numpy.mean(vdata[i]) for i in range(0,3))
+    #print(vmax)
+    #print(vmin)
+    #print(vmean)
+    vdata = numpy.transpose(vdata).flatten()
+    fdata = data['face'].data['vertex_indices']
+    fdata = map(lambda x: numpy.frombuffer(x, dtype=numpy.uint32), fdata)
+    fdata = numpy.ravel(fdata)
+    VERTEX_DATA = numpy.frombuffer(vdata, dtype=numpy.float32)
+    INDEX_DATA = numpy.frombuffer(fdata, dtype=numpy.uint32)
+else:
+    VERTEX_DATA = numpy.array([
+        1.0, 1.0, 0.0,
+        -1.0, 1.0, 0.0,
+        -1.0, -1.0, 0.0,
+        1.0, -1.0, 0.0
+    ], dtype=numpy.float32)
+    INDEX_DATA = numpy.array([
+        0, 1, 2, 2, 3, 0
+    ], dtype=numpy.uint32)
 VERTEX_BUFFER, INDEX_BUFFER, CONE_BUFFER = glGenBuffers(3)
 glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER)
 glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA, GL_STATIC_DRAW)
@@ -141,7 +159,8 @@ layout(location=0) out vec4 color;
 void main()
 {
   vec3 coord = texcoord.xyz / texcoord.w;
-  coord = coord * 0.5 + vec3(0.5);
+  //coord = coord * 0.5 + vec3(0.5);
+  //coord = coord - vec3(0.5);
   color = texture(viewTex, coord.xy);
 }
 """
@@ -193,28 +212,33 @@ glCheckFramebufferStatus(GL_FRAMEBUFFER)
 
 # Draw
 for view in VIEWS:
-    cam = view.camera
-    view_mat = cam.world_to_cam_matrix
-    #proj_mat = 
-    cam_transform_matrix = numpy.dot(view_mat, proj_mat)
-    #cam_transform_matrix = numpy.identity(4, dtype=numpy.float32)
-    
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
     img = view.get_image(ARGS.image)
     if img is None:
         continue
     width, height = img.shape[1], img.shape[0]
-    # Because OpenGL Texture's origin is at left-bottom, not left-top
-    img = numpy.flipud(img)
+    # X: Because OpenGL Texture's origin is at left-bottom, not left-top
+    # img = numpy.flipud(img)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
+    
+    cam = view.camera
+    view_mat = cam.world_to_cam_matrix
+    proj_mat = numpy.zeros(shape=(4,4), dtype=numpy.float32)
+    proj_mat[0:3,0:3] = cam.calibration_matrix(width, height)
+    proj_mat[2,:] = [0, 0, 1, 0]
+    proj_mat[3,:] = [0, 0, 1, 0]
+    proj_mat[0,:] *= 1.0 / float(width)
+    proj_mat[1,:] *= 1.0 / float(height)
+    print(proj_mat)
+    cam_transform_matrix = numpy.dot(proj_mat, view_mat)
     
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FRAMEBUFFER)
     glViewport(0, 0, WIDTH, HEIGHT)
     glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
     glEnable(GL_DEPTH_TEST)
-    glEnable(GL_CULL_FACE)
+    #glEnable(GL_CULL_FACE)
     #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
     if True:
         glBindVertexArray(VERTEX_ARRAY)
