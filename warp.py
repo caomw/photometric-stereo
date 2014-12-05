@@ -13,6 +13,9 @@ parser.add_argument('-r', '--reference', nargs='?', help='Reference View ID [0]'
 parser.add_argument('-v', '--view', nargs='*', help='View ID to Warp [ALL]', type=int)
 parser.add_argument('--znear', nargs='?', help='Nearest Z Value (for Depth)', default=2.0, type=float)
 parser.add_argument('--zfar', nargs='?', help='Farest Z Value (for Depth)', default=500.0, type=float)
+parser.add_argument('--debug-resize', dest='debug_resize', action='store_true')
+parser.add_argument('--no-debug-resize', dest='debug_resize', action='store_false')
+parser.set_defaults(debug_resize=False)
 parser.add_argument('scene', help='Scene Directory')
 parser.add_argument('mesh', help='Triangle Mesh')
 ARGS = parser.parse_args()
@@ -342,12 +345,16 @@ for view in VIEWS:
     # Because the origin of OpenGL framebuffer is at left-bottom,
     # It's required to vertically flip the result image
     RESULT = numpy.flipud(output)
+    if ARGS.debug_resize:
+        RESULT = cv2.resize(RESULT, (800, 600))
     cv2.imshow("Result", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
     glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
     output = glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, None)
     output = numpy.ndarray(shape=(height,width), dtype=numpy.float32, order='C', buffer=output)
     #print(numpy.amin(output))
     SHADOW_RESULT = output
+    if ARGS.debug_resize:
+        SHADOW_RESULT = cv2.resize(SHADOW_RESULT, (800, 600))
     cv2.imshow("Shadow", SHADOW_RESULT)
     cv2.waitKey(0)
     
