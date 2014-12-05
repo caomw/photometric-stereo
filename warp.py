@@ -101,14 +101,21 @@ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
 # Create Program
 VertCode = """#version 330 core
 layout(location=0) in vec4 pos;
-out vec4 texcoord;
+
 uniform mat4 refTransform;
 uniform mat4 camTransform;
+uniform vec3 camPosition;
+
+out V2G {
+  vec4 texcoord;
+  vec3 dir_to_cam;
+} output;
+
 void main()
 {
-  //texcoord = pos;
-  //gl_Position = pos;
-  texcoord = camTransform * pos;
+  output.texcoord = camTransform * pos;
+  output.dir_to_cam = vec3(0.0);
+  
   vec4 proj_pos = refTransform * pos;
   float w = proj_pos.w;
   vec2 xy = proj_pos.xy;
@@ -118,24 +125,53 @@ void main()
   gl_Position = proj_pos;
 }
 """
-FragCode = """#version 330 core
-in vec4 texcoord;
-uniform sampler2D viewTex;
-uniform sampler2D shadowTex;
-layout(location=0) out vec4 color;
+GeomCode = """#version 330 core
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
+
+in V2G {
+  vec4 texcoord;
+  vec3 dir_to_cam;
+} input[];
+
+out G2F {
+  vec4 texcoord;
+} output;
+
 void main()
 {
-  vec3 coord = texcoord.xyz / texcoord.w;
+  for (int i = 0; i < 3; ++i) {
+    gl_Position = gl_in[i].gl_Position;
+    output.texcoord = input[i].texcoord;
+    EmitVertex();
+  }
+  EndPrimitive();
+}
+"""
+
+FragCode = """#version 330 core
+layout(location=0) out vec4 color;
+
+uniform sampler2D viewTex;
+uniform sampler2D shadowTex;
+
+in G2F {
+  vec4 texcoord;
+} input;
+
+void main()
+{
+  vec3 coord = input.texcoord.xyz / input.texcoord.w;
   //coord = coord * 0.5 + vec3(0.5);
   //coord = coord - vec3(0.5);
   float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
-  if (depth < 0.0)
+  if (depth < -0.0001)
     discard;
   color = texture(viewTex, coord.xy);
 }
 """
+
 DepthFragCode = """#version 330 core
-in vec4 texcoord;
 layout(location=0) out vec4 color;
 void main()
 {
@@ -144,6 +180,7 @@ void main()
 """
 PROGRAM = shaders.compileProgram(
   shaders.compileShader(VertCode, GL_VERTEX_SHADER),
+  shaders.compileShader(GeomCode, GL_GEOMETRY_SHADER),
   shaders.compileShader(FragCode, GL_FRAGMENT_SHADER)
 )
 DEPTH_PROGRAM = shaders.compileProgram(
@@ -202,16 +239,16 @@ for view in VIEWS:
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
     
     # Prepare Shadow Texture
     glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, None)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
     
     # Prepare Shadow Framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, SHADOW_FRAMEBUFFER)
