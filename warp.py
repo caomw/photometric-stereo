@@ -184,8 +184,8 @@ void main()
   //coord = coord * 0.5 + vec3(0.5);
   //coord = coord - vec3(0.5);
   float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
-  //if (depth < -0.0001) { discard; }
-  if (depth < -0.0001 || dot(input.normal, input.dir_to_cam) < 0.001) { discard; }
+  if (depth < -0.001) { discard; }
+  //if (depth < -0.0001 || dot(input.normal, input.dir_to_cam) < 0.001) { discard; }
   FragColor = texture(viewTex, coord.xy);
   //FragColor = vec4(input.normal * 0.5 + vec3(0.5), 1.0);
 }
