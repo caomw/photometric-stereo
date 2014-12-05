@@ -11,6 +11,8 @@ parser = ArgumentParser(description='3D Warping')
 parser.add_argument('-i', '--image', nargs='?', help='Image Name [undistorted]', default='undistorted')
 parser.add_argument('-r', '--reference', nargs='?', help='Reference View ID [0]', default=0, type=int)
 parser.add_argument('-v', '--view', nargs='*', help='View ID to Warp [ALL]', type=int)
+parser.add_argument('--znear', nargs='?', help='Nearest Z Value (for Depth)', default=2.0, type=float)
+parser.add_argument('--zfar', nargs='?', help='Farest Z Value (for Depth)', default=500.0, type=float)
 parser.add_argument('scene', help='Scene Directory')
 parser.add_argument('mesh', help='Triangle Mesh')
 ARGS = parser.parse_args()
@@ -44,7 +46,7 @@ def camera_projection_matrix(cam, width, height, znear, zfar):
     proj_mat[1,:] *= 1.0 / float(height)
     return numpy.dot(proj_mat, view_mat)
 
-ZNEAR, ZFAR = 0.1, 500.0
+ZNEAR, ZFAR = ARGS.znear, ARGS.zfar
 
 REF_CAM = REF_VIEW.camera
 REF_TRANSFORM_MATRIX = camera_projection_matrix(REF_CAM, WIDTH, HEIGHT, ZNEAR, ZFAR)
@@ -109,12 +111,14 @@ uniform vec3 camPosition;
 out V2G {
   vec4 texcoord;
   vec3 dir_to_cam;
+  vec3 position;
 } output;
 
 void main()
 {
   output.texcoord = camTransform * pos;
-  output.dir_to_cam = vec3(0.0);
+  output.dir_to_cam = normalize(camPosition - pos.xyz);
+  output.position = pos.xyz;
   
   vec4 proj_pos = refTransform * pos;
   float w = proj_pos.w;
@@ -132,17 +136,27 @@ layout(triangle_strip, max_vertices = 3) out;
 in V2G {
   vec4 texcoord;
   vec3 dir_to_cam;
+  vec3 position;
 } input[];
 
 out G2F {
   vec4 texcoord;
+  vec3 dir_to_cam;
+  vec3 normal;
 } output;
 
 void main()
 {
+  // Compute Normal
+  vec3 v1 = input[1].position - input[0].position;
+  vec3 v2 = input[2].position - input[0].position;
+  vec3 normal = normalize(cross(v1, v2));
+  
   for (int i = 0; i < 3; ++i) {
     gl_Position = gl_in[i].gl_Position;
     output.texcoord = input[i].texcoord;
+    output.dir_to_cam = input[i].dir_to_cam;
+    output.normal = normal;
     EmitVertex();
   }
   EndPrimitive();
@@ -150,13 +164,15 @@ void main()
 """
 
 FragCode = """#version 330 core
-layout(location=0) out vec4 color;
+layout(location=0) out vec4 FragColor;
 
 uniform sampler2D viewTex;
 uniform sampler2D shadowTex;
 
 in G2F {
   vec4 texcoord;
+  vec3 dir_to_cam;
+  vec3 normal;
 } input;
 
 void main()
@@ -165,9 +181,10 @@ void main()
   //coord = coord * 0.5 + vec3(0.5);
   //coord = coord - vec3(0.5);
   float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
-  if (depth < -0.0001)
-    discard;
-  color = texture(viewTex, coord.xy);
+  //if (depth < -0.0001) { discard; }
+  if (depth < -0.0001 || dot(input.normal, input.dir_to_cam) < 0.001) { discard; }
+  FragColor = texture(viewTex, coord.xy);
+  //FragColor = vec4(input.normal * 0.5 + vec3(0.5), 1.0);
 }
 """
 
@@ -196,7 +213,8 @@ void main()
   vec4 proj_pos = transform * pos;
   float w = proj_pos.w;
   vec2 xy = proj_pos.xy;
-  //xy.y = w - xy.y;
+  // Vertically flip depth map on purpose!
+  //xy.y = w - xy.y; // original version, should be commented out
   xy = (2.0 * xy) - vec2(w);
   proj_pos.xy = xy;
   gl_Position = proj_pos;
@@ -234,6 +252,7 @@ for view in VIEWS:
     if img is None:
         continue
     width, height = img.shape[1], img.shape[0]
+    #img.fill(255)
     # X: Because OpenGL Texture's origin is at left-bottom, not left-top
     # img = numpy.flipud(img)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
@@ -269,7 +288,7 @@ for view in VIEWS:
     glClear(GL_DEPTH_BUFFER_BIT)
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
-    glEnable(GL_CULL_FACE)
+    glDisable(GL_CULL_FACE) # Eliminate isolated fragments
     glUseProgram(SHADOW_PROGRAM)
     loc = glGetUniformLocation(SHADOW_PROGRAM, 'transform')
     glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
@@ -280,7 +299,6 @@ for view in VIEWS:
     glViewport(0, 0, WIDTH, HEIGHT)
     glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
-    glEnable(GL_CULL_FACE)
     #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
     
     # Bind Texture
@@ -295,6 +313,7 @@ for view in VIEWS:
     glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
     glEnable(GL_DEPTH_TEST)
+    # GL_CULL_FACE is disabled to eliminate isolated fragments
     glDepthFunc(GL_LESS)
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
     
@@ -306,8 +325,11 @@ for view in VIEWS:
     glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
     loc = glGetUniformLocation(PROGRAM, 'camTransform')
     glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
+    loc = glGetUniformLocation(PROGRAM, 'camPosition')
+    glUniform3f(loc, *(cam.position))
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
     glDepthFunc(GL_LEQUAL)
+    glEnable(GL_CULL_FACE) # For speed
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
     
     glFlush()
@@ -321,7 +343,16 @@ for view in VIEWS:
     # It's required to vertically flip the result image
     RESULT = numpy.flipud(output)
     cv2.imshow("Result", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
+    glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
+    output = glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, None)
+    output = numpy.ndarray(shape=(height,width), dtype=numpy.float32, order='C', buffer=output)
+    #print(numpy.amin(output))
+    SHADOW_RESULT = output
+    cv2.imshow("Shadow", SHADOW_RESULT)
     cv2.waitKey(0)
+    
+    # Cleanup View
+    view.cleanup_cache()
 
 # Cleanup
 glDeleteProgram(PROGRAM)

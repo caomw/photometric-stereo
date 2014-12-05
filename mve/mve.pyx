@@ -120,6 +120,8 @@ cdef class View:
             return None
         raw = self.thisptr.get().get_image(name)
         return _image2ndarray(raw)
+    def cleanup_cache(self):
+        self.thisptr.get().cache_cleanup()
 
 cdef class Scene:
     cdef RefPtr[CScene] thisptr
