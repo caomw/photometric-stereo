@@ -25,7 +25,6 @@ if ARGS.view == None:
     ARGS.view = map(lambda x: x.id, SCENE.views)
 print('Reference View: ' + str(ARGS.reference))
 print('Views to warp: ' + str(ARGS.view))
-
 VIEWS = SCENE.views
 REF_VIEW = VIEWS[ARGS.reference]
 REF_IMG = REF_VIEW.get_image(ARGS.image)
@@ -33,35 +32,22 @@ WIDTH, HEIGHT = REF_IMG.shape[1], REF_IMG.shape[0]
 print('Ref Image Dim = (' + str(WIDTH) + ', ' + str(HEIGHT) + ')')
 VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 
+# define camera projection matrix
+def camera_projection_matrix(cam, width, height, znear, zfar):
+    view_mat = cam.world_to_cam_matrix
+    proj_mat = numpy.zeros(shape=(4,4), dtype=numpy.float32)
+    proj_mat[0:3,0:3] = cam.calibration_matrix(width, height)
+    proj_mat[2,2] = (znear+zfar) / (zfar-znear)
+    proj_mat[2,3] = (-2*znear*zfar) / (zfar-znear)
+    proj_mat[3,:] = [0, 0, 1, 0]
+    proj_mat[0,:] *= 1.0 / float(width)
+    proj_mat[1,:] *= 1.0 / float(height)
+    return numpy.dot(proj_mat, view_mat)
+
 ZNEAR, ZFAR = 0.1, 500.0
 
 REF_CAM = REF_VIEW.camera
-#world_mat = numpy.array([
-#    [1.0, 0.0, 0.0, 0.0],
-#    [0.0, -1.0, 0.0, 0.0],
-#    [0.0, 0.0, -1.0, 0.0],
-#    [0.0, 0.0, 0.0, 1.0]
-#], dtype=numpy.float32)
-#view_mat = numpy.array([
-#    [1.0, 0.0, 0.0, 0.0],
-#    [0.0, 1.0, 0.0, 0.0],
-#    [0.0, 0.0, 1.0, -10.0],
-#    [0.0, 0.0, 0.0, 1.0]
-#], dtype=numpy.float32)
-#view_mat = numpy.dot(view_mat, world_mat)
-view_mat = REF_CAM.world_to_cam_matrix
-#proj_mat = numpy.identity(4, dtype=numpy.float32)
-#aspect = float(WIDTH) / float(HEIGHT)
-#proj_mat[0, 0] = 1.0 / aspect
-#proj_mat[2, 2:4] = [(ZNEAR+ZFAR)/(ZNEAR-ZFAR), (2*ZNEAR*ZFAR)/(ZNEAR-ZFAR)]
-#proj_mat[3, :] = [0, 0, -1, 0]
-proj_mat = numpy.zeros(shape=(4,4), dtype=numpy.float32)
-proj_mat[0:3,0:3] = REF_CAM.calibration_matrix(WIDTH, HEIGHT)
-proj_mat[2,2:4] = [(ZNEAR+ZFAR)/(ZFAR-ZNEAR), (-2*ZNEAR*ZFAR)/(ZFAR-ZNEAR)]
-proj_mat[3,:] = [0, 0, 1, 0]
-proj_mat[0,:] *= 1.0 / float(WIDTH)
-proj_mat[1,:] *= 1.0 / float(HEIGHT)
-REF_TRANSFORM_MATRIX = numpy.dot(proj_mat, view_mat)
+REF_TRANSFORM_MATRIX = camera_projection_matrix(REF_CAM, WIDTH, HEIGHT, ZNEAR, ZFAR)
 #print(REF_TRANSFORM_MATRIX)
 
 # Initialize OpenGL
@@ -81,12 +67,6 @@ if True:
     data = PlyData.read(ARGS.mesh)
     vdata = data['vertex'].data
     vdata = (vdata['x'], vdata['y'], vdata['z'])
-    #vmax = tuple(numpy.amax(vdata[i]) for i in range(0,3))
-    #vmin = tuple(numpy.amin(vdata[i]) for i in range(0,3))
-    #vmean = tuple(numpy.mean(vdata[i]) for i in range(0,3))
-    #print(vmax)
-    #print(vmin)
-    #print(vmean)
     vdata = numpy.transpose(vdata).flatten()
     fdata = data['face'].data['vertex_indices']
     fdata = map(lambda x: numpy.frombuffer(x, dtype=numpy.uint32), fdata)
@@ -103,36 +83,20 @@ else:
     INDEX_DATA = numpy.array([
         0, 1, 2, 2, 3, 0
     ], dtype=numpy.uint32)
-VERTEX_BUFFER, INDEX_BUFFER, CONE_BUFFER = glGenBuffers(3)
+VERTEX_BUFFER, INDEX_BUFFER = glGenBuffers(2)
 glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER)
 glBufferData(GL_ARRAY_BUFFER, VERTEX_DATA, GL_STATIC_DRAW)
 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
 glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_DATA, GL_STATIC_DRAW)
 NUM_ELEMENTS = len(INDEX_DATA)
-CONE_DATA = numpy.array([
-    0.0, 0.0, 0.0,
-    0.5, 0.5, 1.0,
-    -0.5, 0.5, 1.0,
-    0.0, 0.0, 0.0,
-    0.5, -0.5, 1.0,
-    -0.5, -0.5, 1.0,
-    0.0, 0.0, 0.0
-], dtype=numpy.float32)
-glBindBuffer(GL_ARRAY_BUFFER, CONE_BUFFER)
-glBufferData(GL_ARRAY_BUFFER, CONE_DATA, GL_STATIC_DRAW)
-CONE_NUM_ELEMENTS = len(CONE_DATA)/3
 
 # Create VAO
-VERTEX_ARRAY, CONE_ARRAY = glGenVertexArrays(2)
+VERTEX_ARRAY = glGenVertexArrays(1)
 glBindVertexArray(VERTEX_ARRAY)
 glBindBuffer(GL_ARRAY_BUFFER, VERTEX_BUFFER)
 glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
-glBindVertexArray(CONE_ARRAY)
-glBindBuffer(GL_ARRAY_BUFFER, CONE_BUFFER)
-glEnableVertexAttribArray(0)
-glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 
 # Create Program
 VertCode = """#version 330 core
@@ -157,66 +121,77 @@ void main()
 FragCode = """#version 330 core
 in vec4 texcoord;
 uniform sampler2D viewTex;
+uniform sampler2D shadowTex;
 layout(location=0) out vec4 color;
 void main()
 {
   vec3 coord = texcoord.xyz / texcoord.w;
   //coord = coord * 0.5 + vec3(0.5);
   //coord = coord - vec3(0.5);
+  float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
+  if (depth < 0.0)
+    discard;
   color = texture(viewTex, coord.xy);
+}
+"""
+DepthFragCode = """#version 330 core
+in vec4 texcoord;
+layout(location=0) out vec4 color;
+void main()
+{
+  color = vec4(1.0);
 }
 """
 PROGRAM = shaders.compileProgram(
   shaders.compileShader(VertCode, GL_VERTEX_SHADER),
   shaders.compileShader(FragCode, GL_FRAGMENT_SHADER)
 )
+DEPTH_PROGRAM = shaders.compileProgram(
+  shaders.compileShader(VertCode, GL_VERTEX_SHADER),
+  shaders.compileShader(DepthFragCode, GL_FRAGMENT_SHADER)
+)
 
-ConeVertCode = """#version 330 core
+ShadowVertCode = """#version 330 core
 layout(location=0) in vec4 pos;
-out vec4 color;
-uniform mat4 refTransform;
+uniform mat4 transform;
 void main()
 {
-  color = mix(vec4(1.0), vec4(1.0, 0.0, 0.0, 0.0), abs(pos.z));
-  gl_Position = refTransform * pos;
+  vec4 proj_pos = transform * pos;
+  float w = proj_pos.w;
+  vec2 xy = proj_pos.xy;
+  //xy.y = w - xy.y;
+  xy = (2.0 * xy) - vec2(w);
+  proj_pos.xy = xy;
+  gl_Position = proj_pos;
 }
 """
-ConeFragCode = """#version 330 core
-layout(location=0) out vec4 FragColor;
-in vec4 color;
-void main()
-{
-  FragColor = color;
-}
+ShadowFragCode = """#version 330 core
+void main() {}
 """
-CONE_PROGRAM = shaders.compileProgram(
-  shaders.compileShader(ConeVertCode, GL_VERTEX_SHADER),
-  shaders.compileShader(ConeFragCode, GL_FRAGMENT_SHADER)
+SHADOW_PROGRAM = shaders.compileProgram(
+  shaders.compileShader(ShadowVertCode, GL_VERTEX_SHADER),
+  shaders.compileShader(ShadowFragCode, GL_FRAGMENT_SHADER)
 )
 
 # Create Texture
-VIEW_TEX, COLOR_TEX, DEPTH_TEX = glGenTextures(3)
-glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
-#glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, REF_IMG)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+VIEW_TEX, COLOR_TEX, DEPTH_TEX, SHADOW_TEX = glGenTextures(4)
 glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
 glBindTexture(GL_TEXTURE_2D, DEPTH_TEX)
 glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, None)
+# VIEW_TEX, SHADOw_TEX will be initialized later
 
 # Create Framebuffer
-FRAMEBUFFER = glGenFramebuffers(1)
+FRAMEBUFFER, SHADOW_FRAMEBUFFER = glGenFramebuffers(2)
 glBindFramebuffer(GL_FRAMEBUFFER, FRAMEBUFFER)
 glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, COLOR_TEX, 0)
 glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, DEPTH_TEX, 0)
 glCheckFramebufferStatus(GL_FRAMEBUFFER)
+# SHADOW_FRAMEBUFFER will be initialized later
 
 # Draw
 for view in VIEWS:
-    glActiveTexture(GL_TEXTURE0)
+    # Prepare View Texture
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
     img = view.get_image(ARGS.image)
     if img is None:
@@ -225,41 +200,79 @@ for view in VIEWS:
     # X: Because OpenGL Texture's origin is at left-bottom, not left-top
     # img = numpy.flipud(img)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
     
+    # Prepare Shadow Texture
+    glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, None)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    
+    # Prepare Shadow Framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, SHADOW_FRAMEBUFFER)
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, SHADOW_TEX, 0)
+    
+    # Projection Matrix
     cam = view.camera
-    view_mat = cam.world_to_cam_matrix
-    proj_mat = numpy.zeros(shape=(4,4), dtype=numpy.float32)
-    proj_mat[0:3,0:3] = cam.calibration_matrix(width, height)
-    proj_mat[2,:] = [0, 0, 1, 0]
-    proj_mat[3,:] = [0, 0, 1, 0]
-    proj_mat[0,:] *= 1.0 / float(width)
-    proj_mat[1,:] *= 1.0 / float(height)
-    #print(proj_mat)
-    cam_transform_matrix = numpy.dot(proj_mat, view_mat)
+    cam_transform_matrix = camera_projection_matrix(cam, width, height, ZNEAR, ZFAR)
     
+    # Bind Model (Vertex Array, Vertex Buffer, Index Buffer)
+    glBindVertexArray(VERTEX_ARRAY)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
+    
+    # Generate Shadow Map
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, SHADOW_FRAMEBUFFER)
+    glViewport(0, 0, width, height)
+    glDrawBuffer(GL_NONE)
+    glClear(GL_DEPTH_BUFFER_BIT)
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
+    glEnable(GL_CULL_FACE)
+    glUseProgram(SHADOW_PROGRAM)
+    loc = glGetUniformLocation(SHADOW_PROGRAM, 'transform')
+    glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
+    glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
+    
+    # Setup Render Target
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FRAMEBUFFER)
     glViewport(0, 0, WIDTH, HEIGHT)
     glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
-    glEnable(GL_DEPTH_TEST)
-    #glEnable(GL_CULL_FACE)
+    glEnable(GL_CULL_FACE)
     #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-    if True:
-        glBindVertexArray(VERTEX_ARRAY)
-        glUseProgram(PROGRAM)
-        glUniform1i(glGetUniformLocation(PROGRAM, 'viewTex'), 0)
-        loc = glGetUniformLocation(PROGRAM, 'refTransform')
-        glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
-        loc = glGetUniformLocation(PROGRAM, 'camTransform')
-        glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
-        glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
-    if False:
-        glBindVertexArray(CONE_ARRAY)
-        glUseProgram(CONE_PROGRAM)
-        loc = glGetUniformLocation(CONE_PROGRAM, 'refTransform')
-        mat = numpy.dot(REF_TRANSFORM_MATRIX, cam.cam_to_world_matrix)
-        glUniformMatrix4fv(loc, 1, GL_TRUE, mat)
-        glDrawArrays(GL_LINE_STRIP, 0, CONE_NUM_ELEMENTS)
+    
+    # Bind Texture
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
+    
+    # Depth Pass
+    glUseProgram(DEPTH_PROGRAM)
+    loc = glGetUniformLocation(DEPTH_PROGRAM, 'refTransform')
+    glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
+    glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
+    
+    # Color Pass
+    glUseProgram(PROGRAM)
+    glUniform1i(glGetUniformLocation(PROGRAM, 'viewTex'), 0)
+    glUniform1i(glGetUniformLocation(PROGRAM, 'shadowTex'), 1)
+    loc = glGetUniformLocation(PROGRAM, 'refTransform')
+    glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+    loc = glGetUniformLocation(PROGRAM, 'camTransform')
+    glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+    glDepthFunc(GL_LEQUAL)
+    glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
+    
     glFlush()
     
     # Readback Result
@@ -275,8 +288,9 @@ for view in VIEWS:
 
 # Cleanup
 glDeleteProgram(PROGRAM)
-glDeleteProgram(CONE_PROGRAM)
-glDeleteVertexArrays(2, [VERTEX_ARRAY, CONE_ARRAY])
-glDeleteFramebuffers(1, [FRAMEBUFFER])
-glDeleteBuffers(3, [VERTEX_BUFFER, INDEX_BUFFER, CONE_BUFFER])
-glDeleteTextures([VIEW_TEX, COLOR_TEX, DEPTH_TEX])
+glDeleteProgram(DEPTH_PROGRAM)
+glDeleteProgram(SHADOW_PROGRAM)
+glDeleteVertexArrays(1, [VERTEX_ARRAY])
+glDeleteFramebuffers(2, [FRAMEBUFFER, SHADOW_FRAMEBUFFER])
+glDeleteBuffers(2, [VERTEX_BUFFER, INDEX_BUFFER])
+glDeleteTextures([VIEW_TEX, COLOR_TEX, DEPTH_TEX, SHADOW_TEX])
