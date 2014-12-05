@@ -115,13 +115,13 @@ out V2G {
   vec4 texcoord;
   vec3 dir_to_cam;
   vec3 position;
-} output;
+} result;
 
 void main()
 {
-  output.texcoord = camTransform * pos;
-  output.dir_to_cam = normalize(camPosition - pos.xyz);
-  output.position = pos.xyz;
+  result.texcoord = camTransform * pos;
+  result.dir_to_cam = normalize(camPosition - pos.xyz);
+  result.position = pos.xyz;
   
   vec4 proj_pos = refTransform * pos;
   float w = proj_pos.w;
@@ -140,26 +140,26 @@ in V2G {
   vec4 texcoord;
   vec3 dir_to_cam;
   vec3 position;
-} input[];
+} vs_input[];
 
 out G2F {
   vec4 texcoord;
   vec3 dir_to_cam;
   vec3 normal;
-} output;
+} result;
 
 void main()
 {
   // Compute Normal
-  vec3 v1 = input[1].position - input[0].position;
-  vec3 v2 = input[2].position - input[0].position;
+  vec3 v1 = vs_input[1].position - vs_input[0].position;
+  vec3 v2 = vs_input[2].position - vs_input[0].position;
   vec3 normal = normalize(cross(v1, v2));
   
   for (int i = 0; i < 3; ++i) {
     gl_Position = gl_in[i].gl_Position;
-    output.texcoord = input[i].texcoord;
-    output.dir_to_cam = input[i].dir_to_cam;
-    output.normal = normal;
+    result.texcoord = vs_input[i].texcoord;
+    result.dir_to_cam = vs_input[i].dir_to_cam;
+    result.normal = normal;
     EmitVertex();
   }
   EndPrimitive();
@@ -176,18 +176,21 @@ in G2F {
   vec4 texcoord;
   vec3 dir_to_cam;
   vec3 normal;
-} input;
+} gs_input;
 
 void main()
 {
-  vec3 coord = input.texcoord.xyz / input.texcoord.w;
+  vec4 texcoord = gs_input.texcoord;
+  vec3 normal = gs_input.normal;
+  vec3 dir_to_cam = gs_input.dir_to_cam;
+  vec3 coord = texcoord.xyz / texcoord.w;
   //coord = coord * 0.5 + vec3(0.5);
   //coord = coord - vec3(0.5);
   float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
   if (depth < -0.001) { discard; }
-  //if (depth < -0.0001 || dot(input.normal, input.dir_to_cam) < 0.001) { discard; }
+  //if (depth < -0.0001 || dot(normal, dir_to_cam) < 0.001) { discard; }
   FragColor = texture(viewTex, coord.xy);
-  //FragColor = vec4(input.normal * 0.5 + vec3(0.5), 1.0);
+  //FragColor = vec4(normal * 0.5 + vec3(0.5), 1.0);
 }
 """
 
