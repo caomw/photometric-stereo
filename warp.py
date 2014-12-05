@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 from plyfile import PlyData
 
 parser = ArgumentParser(description='3D Warping')
-parser.add_argument('-i', '--image', nargs='?', help='Image Name [undistored]', default='undistored')
+parser.add_argument('-i', '--image', nargs='?', help='Image Name [undistorted]', default='undistorted')
 parser.add_argument('-r', '--reference', nargs='?', help='Reference View ID [0]', default=0, type=int)
 parser.add_argument('-v', '--view', nargs='*', help='View ID to Warp [ALL]', type=int)
 parser.add_argument('scene', help='Scene Directory')
