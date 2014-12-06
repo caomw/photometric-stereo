@@ -66,6 +66,7 @@ glutCreateWindow("warp")
 def display():
     glutSwapBuffers()
 glutDisplayFunc(display)
+# cv2.namedWindow('gl', cv2.WINDOW_AUTOSIZE | cv2.WINDOW_OPENGL)
 
 # Create VBO
 if True:
