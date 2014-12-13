@@ -33,7 +33,7 @@ print('Views to warp: ' + str(ARGS.view))
 VIEWS = SCENE.views
 REF_VIEW = VIEWS[ARGS.reference]
 REF_IMG = REF_VIEW.get_image(ARGS.image)
-WIDTH, HEIGHT = REF_IMG.shape[1], REF_IMG.shape[0]
+WIDTH, HEIGHT = REF_IMG.width, REF_IMG.height
 print('Ref Image Dim = (' + str(WIDTH) + ', ' + str(HEIGHT) + ')')
 VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 
@@ -258,11 +258,11 @@ for view in VIEWS:
     img = view.get_image(ARGS.image)
     if img is None:
         continue
-    width, height = img.shape[1], img.shape[0]
+    width, height = img.width, img.height
     #img.fill(255)
     # X: Because OpenGL Texture's origin is at left-bottom, not left-top
     # img = numpy.flipud(img)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img.raw)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
