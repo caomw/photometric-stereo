@@ -1,6 +1,6 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
-from util.ref_ptr cimport RefPtr
+from mve.util.ref_ptr cimport RefPtr
 
 cdef extern from 'mve/image_base.h' namespace 'mve':
     cdef enum ImageType:

@@ -3,13 +3,13 @@
 
 cimport numpy
 import numpy
-from util.ref_ptr cimport RefPtr
-from base.image_base cimport ImageBase as CImageBase, ImageType as CImageType
-cimport base.image_base as image_base
-from base.image_base cimport ImageBase as CImageBase
-from base.camera_info cimport CameraInfo as CCameraInfo
-from base.view cimport View as CView
-from base.scene cimport Scene as CScene
+from mve.util.ref_ptr cimport RefPtr
+from mve.base.image_base cimport ImageBase as CImageBase, ImageType as CImageType
+cimport mve.base.image_base as image_base
+from mve.base.image_base cimport ImageBase as CImageBase
+from mve.base.camera_info cimport CameraInfo as CCameraInfo
+from mve.base.view cimport View as CView
+from mve.base.scene cimport Scene as CScene
 from cython.view cimport array as cvarray
 from libc.string cimport memcpy
 from cpython cimport PyObject, Py_INCREF

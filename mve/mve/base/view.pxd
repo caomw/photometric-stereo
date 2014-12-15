@@ -1,8 +1,8 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
-from base.camera_info cimport CameraInfo
-from base.image_base cimport ImageBase
-from util.ref_ptr cimport RefPtr
+from mve.base.camera_info cimport CameraInfo
+from mve.base.image_base cimport ImageBase
+from mve.util.ref_ptr cimport RefPtr
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 

@@ -1,6 +1,6 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
-from util.ref_ptr cimport RefPtr
+from mve.util.ref_ptr cimport RefPtr
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 
