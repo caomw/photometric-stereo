@@ -5,11 +5,11 @@ s = Scene()
 s.load('../tmp/b-daman/scene')
 #s.load(0)
 
-views = s.get_views()
+views = s.views
 print(views)
 
 for v in views:
-    print(v)
+    print(v.name)
 
 #cam = v.camera
 #print(cam)

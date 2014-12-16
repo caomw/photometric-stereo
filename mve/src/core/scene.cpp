@@ -63,7 +63,11 @@ static PyTypeObject ViewListType = {
   0, // tp_print
   0, // tp_getattr
   0, // tp_setattr
+#if PY_MAJOR_VERSION < 3
   0, // tp_compare
+#else
+  0, // reserved
+#endif
   0, // tp_repr
   0, // tp_as_number
   &ViewList_seq_methods, // tp_as_sequence
@@ -126,7 +130,7 @@ static PyObject* Scene_load(SceneObj *self, PyObject *args)
   return Py_None;
 }
 
-static PyObject* Scene_getViews(SceneObj *self)
+static PyObject* Scene_GetViews(SceneObj *self, void* closure)
 {
   mve::Scene::ViewList& views = self->thisptr->get_views();
 
@@ -140,18 +144,22 @@ static PyObject* Scene_getViews(SceneObj *self)
 
 static PyMethodDef Scene_methods[] = {
   {"load", (PyCFunction)Scene_load, METH_O, "Load Scene"},
-  {"get_views", (PyCFunction)Scene_getViews, METH_NOARGS, "Get Views"},
   {NULL, NULL, 0, NULL}
 };
 
-static int Scene_init(SceneObj *self, PyObject *args, PyObject *keywords)
+static PyGetSetDef Scene_getset[] = {
+  {"views", (getter)Scene_GetViews, NULL, "Views", NULL },
+  {NULL, NULL, NULL, NULL, NULL}
+};
+
+static int Scene_Init(SceneObj *self, PyObject *args, PyObject *keywords)
 {
   //printf("%p\n", self->thisptr.get());
   self->thisptr = mve::Scene::create();
   return 0;
 }
 
-static void Scene_dealloc(SceneObj *self)
+static void Scene_Dealloc(SceneObj *self)
 {
   self->thisptr.reset();
 
@@ -169,11 +177,15 @@ static PyTypeObject SceneType = {
   "mve.core.Scene", // tp_name
   sizeof(SceneObj), // tp_basicsize
   0, // tp_itemsize
-  (destructor)Scene_dealloc, // tp_dealloc
+  (destructor)Scene_Dealloc, // tp_dealloc
   0, // tp_print
   0, // tp_getattr
   0, // tp_setattr
+#if PY_MAJOR_VERSION < 3
   0, // tp_compare
+#else
+  0, // reserved
+#endif
   0, // tp_repr
   0, // tp_as_number
   0, // tp_as_sequence
@@ -194,13 +206,13 @@ static PyTypeObject SceneType = {
   0, // tp_iternext
   Scene_methods, // tp_methods
   0, // tp_members
-  0, // tp_getset
+  Scene_getset, // tp_getset
   0, // tp_base
   0, // tp_dict
   0, // tp_descr_get
   0, // tp_descr_set
   0, // tp_dictoffset
-  (initproc)Scene_init, // tp_init
+  (initproc)Scene_Init, // tp_init
 };
 
 void load_Scene(PyObject* mod)
