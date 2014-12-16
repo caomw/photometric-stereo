@@ -1,8 +1,9 @@
-from os.path import dirname, abspath, join
+from os.path import dirname, abspath, join, exists
 import sys
 ROOT_PATH = dirname(abspath(__file__))
 sys.path.append(join(ROOT_PATH, 'mve'))
 sys.path.append(join(ROOT_PATH, 'plyfile'))
+from os import mkdir
 import mve, numpy, numpy.linalg, cv2
 from argparse import ArgumentParser
 from plyfile import PlyData
@@ -13,12 +14,18 @@ parser.add_argument('-r', '--reference', nargs='?', help='Reference View ID [0]'
 parser.add_argument('-v', '--view', nargs='*', help='View ID to Warp [ALL]', type=int)
 parser.add_argument('--znear', nargs='?', help='Nearest Z Value (for Depth)', default=2.0, type=float)
 parser.add_argument('--zfar', nargs='?', help='Farest Z Value (for Depth)', default=500.0, type=float)
-parser.add_argument('--debug-resize', dest='debug_resize', action='store_true')
-parser.add_argument('--no-debug-resize', dest='debug_resize', action='store_false')
-parser.set_defaults(debug_resize=False)
+#parser.add_argument('--debug-resize', dest='debug_resize', action='store_true')
+#parser.add_argument('--no-debug-resize', dest='debug_resize', action='store_false')
+#parser.set_defaults(debug_resize=False)
 parser.add_argument('scene', help='Scene Directory')
 parser.add_argument('mesh', help='Triangle Mesh')
+parser.add_argument('output', help='Output Directory')
 ARGS = parser.parse_args()
+
+# Prepare Output Dir
+OUTPUT_ROOT = abspath(ARGS.output)
+if not exists(OUTPUT_ROOT):
+    mkdir(OUTPUT_ROOT)
 
 # Load Scene
 print('Scene: ' + ARGS.scene)
@@ -308,14 +315,16 @@ glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
 # Readback Normal
 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
 glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
-output = glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, None)
-output = numpy.ndarray(shape=(HEIGHT,WIDTH,3), dtype=numpy.float32, order='C', buffer=output)
+output = glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_SHORT, None)
+output = numpy.ndarray(shape=(HEIGHT,WIDTH,3), dtype=numpy.uint16, order='C', buffer=output)
 # Because the origin of OpenGL framebuffer is at left-bottom,
 # It's required to vertically flip the result image
-RESULT = numpy.flipud(output)
-if ARGS.debug_resize:
-    RESULT = cv2.resize(RESULT, (800, 600))
-cv2.imshow("Normal", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
+NORMAL_IMAGE = numpy.flipud(output)
+#if ARGS.debug_resize:
+#    RESULT = cv2.resize(RESULT, (800, 600))
+#cv2.imshow("Normal", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
+cv2.imwrite(join(OUTPUT_ROOT, 'normal-{}.tiff'.format(REF_VIEW.id)), NORMAL_IMAGE)
+del NORMAL_IMAGE
 
 # Draw Warpped Images
 glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
@@ -414,23 +423,27 @@ for view in VIEWS:
     # Readback Result
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
     glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
-    output = glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, None)
+    output = glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, None)
     output = numpy.ndarray(shape=(HEIGHT,WIDTH,3), dtype=numpy.uint8, order='C', buffer=output)
     # Because the origin of OpenGL framebuffer is at left-bottom,
     # It's required to vertically flip the result image
     RESULT = numpy.flipud(output)
-    if ARGS.debug_resize:
-        RESULT = cv2.resize(RESULT, (800, 600))
-    cv2.imshow("Result", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
-    glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
-    output = glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, None)
-    output = numpy.ndarray(shape=(height,width), dtype=numpy.float32, order='C', buffer=output)
-    #print(numpy.amin(output))
-    SHADOW_RESULT = output
-    if ARGS.debug_resize:
-        SHADOW_RESULT = cv2.resize(SHADOW_RESULT, (800, 600))
-    cv2.imshow("Shadow", SHADOW_RESULT)
-    cv2.waitKey(0)
+    #if ARGS.debug_resize:
+    #    RESULT = cv2.resize(RESULT, (800, 600))
+    #cv2.imshow("Result", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(join(OUTPUT_ROOT, 'registered-{}-{}.png'.format(REF_VIEW.id, view.id) ), RESULT)
+    del RESULT
+
+    #glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
+    #output = glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, None)
+    #output = numpy.ndarray(shape=(height,width), dtype=numpy.uint16, order='C', buffer=output)
+    #SHADOW_RESULT = output
+    #if ARGS.debug_resize:
+    #    SHADOW_RESULT = cv2.resize(SHADOW_RESULT, (800, 600))
+    #cv2.imshow("Shadow", SHADOW_RESULT)
+    #cv2.imwrite(join(VIEW_OUTPUT_ROOT, 'depth.tiff'), SHADOW_RESULT)
+    #del SHADOW_RESULT
+    #cv2.waitKey(0)
 
     # Cleanup View
     view.cleanup_cache()
