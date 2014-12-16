@@ -87,7 +87,8 @@ static int View_Init(ViewObj *self, PyObject *args, PyObject *kwds)
 
 static PyObject* View_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
 {
-  ViewObj* obj = (ViewObj*) subtype->tp_alloc(subtype, 0);
+  //ViewObj* obj = (ViewObj*) subtype->tp_alloc(subtype, 0);
+  ViewObj* obj = (ViewObj*) PyType_GenericNew(subtype, args, kwds);
 
   ::new(&(obj->thisptr)) mve::View::Ptr();
 
