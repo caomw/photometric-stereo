@@ -5,7 +5,11 @@ s = Scene()
 s.load('../tmp/b-daman/scene')
 #s.load(0)
 
-#v = s.views[0]
+views = s.get_views()
+v = views[1]
+
+cam = v.camera
+print(cam)
 
 #cam = v.camera
 #print(cam.principal_point)
