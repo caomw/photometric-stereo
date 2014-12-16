@@ -102,12 +102,17 @@ static PyTypeObject ViewListType = {
   0, // tp_is_gc
 };
 
-PyObject* ViewListObj_New(mve::Scene::ViewList* viewlist)
+PyObject* ViewListObj_Create(mve::Scene::ViewList* viewlist)
 {
-  ViewListObj* obj = PyObject_New(ViewListObj, (PyTypeObject*)&ViewListType);
-  PyObject_Init((PyObject*)obj, (PyTypeObject*)&ViewListType);
-  obj->thisptr = viewlist;
-  return (PyObject*) obj;
+  PyObject* args = PyTuple_New(0);
+  PyObject* kwds = PyDict_New();
+  PyObject* obj = PyType_GenericNew(&ViewListType, args, kwds);
+  Py_DECREF(args);
+  Py_DECREF(kwds);
+
+  ((ViewListObj*) obj)->thisptr = viewlist;
+
+  return obj;
 }
 
 /***************************************************************************
@@ -135,7 +140,7 @@ static PyObject* Scene_GetViews(SceneObj *self, void* closure)
   mve::Scene::ViewList& views = self->thisptr->get_views();
 
   if (!self->viewlist) {
-    self->viewlist = ViewListObj_New(&views);
+    self->viewlist = ViewListObj_Create(&views);
   }
 
   Py_INCREF(self->viewlist);

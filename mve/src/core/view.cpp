@@ -3,6 +3,7 @@
 #include <Python.h>
 #include <structmember.h>
 #include <numpy/arrayobject.h>
+#include <new>
 
 /***************************************************************************
  * Camera Info Object
@@ -62,10 +63,20 @@ static PyMethodDef View_methods[] = {
   {NULL, NULL, 0, NULL}
 };
 
-static int View_Init(ViewObj *self, PyObject *args, PyObject *keywords)
+static int View_Init(ViewObj *self, PyObject *args, PyObject *kwds)
 {
   self->thisptr = mve::View::create();
   return 0;
+}
+
+static PyObject* View_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
+{
+  ViewObj* obj = (ViewObj*) subtype->tp_alloc(subtype, 0);
+
+  printf("yooo\n");
+  ::new(&(obj->thisptr)) mve::View::Ptr();
+
+  return (PyObject*) obj;
 }
 
 static void View_Dealloc(ViewObj *self)
@@ -152,7 +163,7 @@ static PyTypeObject ViewType = {
   0, // tp_dictoffset
   (initproc)View_Init, // tp_init
   0, // tp_alloc
-  0, // tp_new
+  (newfunc)View_New, // tp_new
   0, // tp_free
   0, // tp_is_gc
 };
@@ -164,16 +175,15 @@ static PyTypeObject ViewType = {
 
 PyObject* ViewObj_Create(mve::View::Ptr ptr)
 {
-  // Allocation
-  ViewObj* obj = PyObject_New(ViewObj, (PyTypeObject*)&ViewType);
+  PyObject* args = PyTuple_New(0);
+  PyObject* kwds = PyDict_New();
+  PyObject* obj = PyType_GenericNew(&ViewType, args, kwds);
+  Py_DECREF(args);
+  Py_DECREF(kwds);
 
-  // Initialize (PyObject)
-  PyObject_Init((PyObject*)obj, (PyTypeObject*)&ViewType);
-  // Initialize (ViewObj)
-  memset(&(obj->thisptr), 0, sizeof(mve::View::Ptr));
-  obj->thisptr = ptr;
+  ((ViewObj*) obj)->thisptr = ptr;
 
-  return (PyObject*)obj;
+  return obj;
 }
 
 void load_View(PyObject* mod)
