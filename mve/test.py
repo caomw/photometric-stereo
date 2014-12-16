@@ -6,10 +6,13 @@ s.load('../tmp/b-daman/scene')
 #s.load(0)
 
 views = s.get_views()
-v = views[1]
+print(views)
 
-cam = v.camera
-print(cam)
+v = views[1]
+print(v)
+
+#cam = v.camera
+#print(cam)
 
 #cam = v.camera
 #print(cam.principal_point)

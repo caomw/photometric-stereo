@@ -25,7 +25,7 @@ static PyObject* ViewList_item(ViewListObj* self, Py_ssize_t index)
   if (ptr == NULL)
     return NULL;
 
-  PyObject* obj = ViewObj_New(ptr);
+  PyObject* obj = ViewObj_Create(ptr);
   return obj;
 }
 
@@ -101,6 +101,7 @@ static PyTypeObject ViewListType = {
 PyObject* ViewListObj_New(mve::Scene::ViewList* viewlist)
 {
   ViewListObj* obj = PyObject_New(ViewListObj, (PyTypeObject*)&ViewListType);
+  PyObject_Init((PyObject*)obj, (PyTypeObject*)&ViewListType);
   obj->thisptr = viewlist;
   return (PyObject*) obj;
 }

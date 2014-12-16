@@ -161,10 +161,17 @@ static PyTypeObject ViewType = {
  *
  */
 
-PyObject* ViewObj_New(mve::View::Ptr ptr)
+PyObject* ViewObj_Create(mve::View::Ptr ptr)
 {
+  // Allocation
   ViewObj* obj = PyObject_New(ViewObj, (PyTypeObject*)&ViewType);
+
+  // Initialize (PyObject)
+  /* returns borrowed ref */PyObject_Init((PyObject*)obj, (PyTypeObject*)&ViewType);
+  // Initialize (ViewObj)
+  memset(&(obj->thisptr), 0, sizeof(mve::View::Ptr));
   obj->thisptr = ptr;
+
   return (PyObject*)obj;
 }
 
