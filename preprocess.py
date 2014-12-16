@@ -3,7 +3,7 @@ import sys
 ROOT_PATH = dirname(abspath(__file__))
 sys.path.append(join(ROOT_PATH, 'mve'))
 sys.path.append(join(ROOT_PATH, 'plyfile'))
-import mve, numpy, cv2
+import mve, numpy, numpy.linalg, cv2
 from argparse import ArgumentParser
 from plyfile import PlyData
 
@@ -54,6 +54,17 @@ ZNEAR, ZFAR = ARGS.znear, ARGS.zfar
 REF_CAM = REF_VIEW.camera
 REF_TRANSFORM_MATRIX = camera_projection_matrix(REF_CAM, WIDTH, HEIGHT, ZNEAR, ZFAR)
 #print(REF_TRANSFORM_MATRIX)
+
+# compute normal matrix
+def camera_normal_matrix(cam):
+    view_mat = cam.world_to_cam_matrix[0:3,0:3]
+    fix_mat = numpy.array([[1.0, 0.0, 0.0],
+                           [0.0, -1.0, 0.0],
+                           [0.0, 0.0, -1.0]], dtype=numpy.float32)
+    view_mat = numpy.dot(fix_mat, view_mat)
+    return numpy.transpose(numpy.linalg.inv(view_mat))
+
+REF_NORMAL_MATRIX = camera_normal_matrix(REF_CAM)
 
 # Initialize OpenGL
 from OpenGL.GL import *
@@ -123,7 +134,7 @@ void main()
   result.texcoord = camTransform * pos;
   result.dir_to_cam = normalize(camPosition - pos.xyz);
   result.position = pos.xyz;
-  
+
   vec4 proj_pos = refTransform * pos;
   float w = proj_pos.w;
   vec2 xy = proj_pos.xy;
@@ -133,9 +144,44 @@ void main()
   gl_Position = proj_pos;
 }
 """
-GeomCode = """#version 330 core
+
+FragCode = """#version 330 core
+layout(location=0) out vec4 FragColor;
+
+uniform sampler2D viewTex;
+uniform sampler2D shadowTex;
+
+in V2G {
+  vec4 texcoord;
+  vec3 dir_to_cam;
+  vec3 position;
+} vs_input;
+
+void main()
+{
+  vec4 texcoord = vs_input.texcoord;
+  vec3 coord = texcoord.xyz / texcoord.w;
+  //coord = coord * 0.5 + vec3(0.5);
+  //coord = coord - vec3(0.5);
+  float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
+  if (depth < -0.001) { discard; }
+  FragColor = texture(viewTex, coord.xy);
+}
+"""
+
+DepthFragCode = """#version 330 core
+layout(location=0) out vec4 color;
+void main()
+{
+  color = vec4(1.0);
+}
+"""
+
+NormalGeomCode = """#version 330 core
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
+
+uniform mat3 refNormalTransform;
 
 in V2G {
   vec4 texcoord;
@@ -155,7 +201,9 @@ void main()
   vec3 v1 = vs_input[1].position - vs_input[0].position;
   vec3 v2 = vs_input[2].position - vs_input[0].position;
   vec3 normal = normalize(cross(v1, v2));
-  
+
+  normal = refNormalTransform * normal;
+
   for (int i = 0; i < 3; ++i) {
     gl_Position = gl_in[i].gl_Position;
     result.texcoord = vs_input[i].texcoord;
@@ -167,11 +215,8 @@ void main()
 }
 """
 
-FragCode = """#version 330 core
-layout(location=0) out vec4 FragColor;
-
-uniform sampler2D viewTex;
-uniform sampler2D shadowTex;
+NormalFragCode = """#version 330 core
+layout(location=0) out vec4 color;
 
 in G2F {
   vec4 texcoord;
@@ -181,35 +226,22 @@ in G2F {
 
 void main()
 {
-  vec4 texcoord = gs_input.texcoord;
-  vec3 normal = gs_input.normal;
-  vec3 dir_to_cam = gs_input.dir_to_cam;
-  vec3 coord = texcoord.xyz / texcoord.w;
-  //coord = coord * 0.5 + vec3(0.5);
-  //coord = coord - vec3(0.5);
-  float depth = texture(shadowTex, coord.xy).r - (coord.z + 1.0)*0.5;
-  if (depth < -0.001) { discard; }
-  //if (depth < -0.0001 || dot(normal, dir_to_cam) < 0.001) { discard; }
-  FragColor = texture(viewTex, coord.xy);
-  //FragColor = vec4(normal * 0.5 + vec3(0.5), 1.0);
+  color = vec4(gs_input.normal * 0.5 + vec3(0.5), 1.0);
 }
 """
 
-DepthFragCode = """#version 330 core
-layout(location=0) out vec4 color;
-void main()
-{
-  color = vec4(1.0);
-}
-"""
 PROGRAM = shaders.compileProgram(
   shaders.compileShader(VertCode, GL_VERTEX_SHADER),
-  shaders.compileShader(GeomCode, GL_GEOMETRY_SHADER),
   shaders.compileShader(FragCode, GL_FRAGMENT_SHADER)
 )
 DEPTH_PROGRAM = shaders.compileProgram(
   shaders.compileShader(VertCode, GL_VERTEX_SHADER),
   shaders.compileShader(DepthFragCode, GL_FRAGMENT_SHADER)
+)
+NORMAL_PROGRAM = shaders.compileProgram(
+  shaders.compileShader(VertCode, GL_VERTEX_SHADER),
+  shaders.compileShader(NormalGeomCode, GL_GEOMETRY_SHADER),
+  shaders.compileShader(NormalFragCode, GL_FRAGMENT_SHADER)
 )
 
 ShadowVertCode = """#version 330 core
@@ -237,8 +269,7 @@ SHADOW_PROGRAM = shaders.compileProgram(
 
 # Create Texture
 VIEW_TEX, COLOR_TEX, DEPTH_TEX, SHADOW_TEX = glGenTextures(4)
-glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+# COLOR_TEX
 glBindTexture(GL_TEXTURE_2D, DEPTH_TEX)
 glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, None)
 # VIEW_TEX, SHADOw_TEX will be initialized later
@@ -246,12 +277,51 @@ glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT, 0, GL_DEPTH_S
 # Create Framebuffer
 FRAMEBUFFER, SHADOW_FRAMEBUFFER = glGenFramebuffers(2)
 glBindFramebuffer(GL_FRAMEBUFFER, FRAMEBUFFER)
-glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, COLOR_TEX, 0)
+#glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, COLOR_TEX, 0)
 glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, DEPTH_TEX, 0)
 glCheckFramebufferStatus(GL_FRAMEBUFFER)
 # SHADOW_FRAMEBUFFER will be initialized later
 
-# Draw
+# Draw Normal Prior
+glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, None)
+glBindFramebuffer(GL_FRAMEBUFFER, FRAMEBUFFER)
+glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, COLOR_TEX, 0)
+
+glBindVertexArray(VERTEX_ARRAY)
+glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
+
+glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FRAMEBUFFER)
+glViewport(0, 0, WIDTH, HEIGHT)
+glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
+glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
+
+glUseProgram(NORMAL_PROGRAM)
+loc = glGetUniformLocation(NORMAL_PROGRAM, 'refTransform')
+glUniformMatrix4fv(loc, 1, GL_TRUE, REF_TRANSFORM_MATRIX)
+loc = glGetUniformLocation(NORMAL_PROGRAM, 'refNormalTransform')
+glUniformMatrix3fv(loc, 1, GL_TRUE, REF_NORMAL_MATRIX)
+glEnable(GL_DEPTH_TEST)
+
+glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
+
+# Readback Normal
+glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
+output = glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, None)
+output = numpy.ndarray(shape=(HEIGHT,WIDTH,3), dtype=numpy.float32, order='C', buffer=output)
+# Because the origin of OpenGL framebuffer is at left-bottom,
+# It's required to vertically flip the result image
+RESULT = numpy.flipud(output)
+if ARGS.debug_resize:
+    RESULT = cv2.resize(RESULT, (800, 600))
+cv2.imshow("Normal", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
+
+# Draw Warpped Images
+glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+glBindFramebuffer(GL_FRAMEBUFFER, FRAMEBUFFER)
+glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, COLOR_TEX, 0)
 for view in VIEWS:
     # Prepare View Texture
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
@@ -267,7 +337,7 @@ for view in VIEWS:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
-    
+
     # Prepare Shadow Texture
     glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, None)
@@ -275,19 +345,19 @@ for view in VIEWS:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
-    
+
     # Prepare Shadow Framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, SHADOW_FRAMEBUFFER)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, SHADOW_TEX, 0)
-    
+
     # Projection Matrix
     cam = view.camera
     cam_transform_matrix = camera_projection_matrix(cam, width, height, ZNEAR, ZFAR)
-    
+
     # Bind Model (Vertex Array, Vertex Buffer, Index Buffer)
     glBindVertexArray(VERTEX_ARRAY)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER)
-    
+
     # Generate Shadow Map
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, SHADOW_FRAMEBUFFER)
     glViewport(0, 0, width, height)
@@ -300,20 +370,20 @@ for view in VIEWS:
     loc = glGetUniformLocation(SHADOW_PROGRAM, 'transform')
     glUniformMatrix4fv(loc, 1, GL_TRUE, cam_transform_matrix)
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
-    
+
     # Setup Render Target
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FRAMEBUFFER)
     glViewport(0, 0, WIDTH, HEIGHT)
     glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
     #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-    
+
     # Bind Texture
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, VIEW_TEX)
     glActiveTexture(GL_TEXTURE1)
     glBindTexture(GL_TEXTURE_2D, SHADOW_TEX)
-    
+
     # Depth Pass
     glUseProgram(DEPTH_PROGRAM)
     loc = glGetUniformLocation(DEPTH_PROGRAM, 'refTransform')
@@ -323,7 +393,7 @@ for view in VIEWS:
     # GL_CULL_FACE is disabled to eliminate isolated fragments
     glDepthFunc(GL_LESS)
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
-    
+
     # Color Pass
     glUseProgram(PROGRAM)
     glUniform1i(glGetUniformLocation(PROGRAM, 'viewTex'), 0)
@@ -338,9 +408,9 @@ for view in VIEWS:
     glDepthFunc(GL_LEQUAL)
     glEnable(GL_CULL_FACE) # For speed
     glDrawElements(GL_TRIANGLES, NUM_ELEMENTS, GL_UNSIGNED_INT, None)
-    
+
     glFlush()
-    
+
     # Readback Result
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
     glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
@@ -361,7 +431,7 @@ for view in VIEWS:
         SHADOW_RESULT = cv2.resize(SHADOW_RESULT, (800, 600))
     cv2.imshow("Shadow", SHADOW_RESULT)
     cv2.waitKey(0)
-    
+
     # Cleanup View
     view.cleanup_cache()
 
