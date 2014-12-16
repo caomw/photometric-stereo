@@ -1,4 +1,2 @@
-*.c
-*.cpp
 *.so
 /build
