@@ -97,16 +97,16 @@ static PyTypeObject ViewListType = {
   0, // tp_dictoffset
   0, // tp_init
   0, // tp_alloc
-  0, // tp_new
+  PyType_GenericNew, // tp_new
   0, // tp_free
   0, // tp_is_gc
 };
 
-PyObject* ViewListObj_Create(mve::Scene::ViewList* viewlist)
+static PyObject* ViewListObj_Create(mve::Scene::ViewList* viewlist)
 {
   PyObject* args = PyTuple_New(0);
   PyObject* kwds = PyDict_New();
-  PyObject* obj = PyType_GenericNew(&ViewListType, args, kwds);
+  PyObject* obj = ViewListType.tp_new(&ViewListType, args, kwds);
   Py_DECREF(args);
   Py_DECREF(kwds);
 
@@ -222,14 +222,13 @@ static PyTypeObject SceneType = {
 
 void load_Scene(PyObject* mod)
 {
-  ViewListType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&ViewListType) < 0)
-    return;
+    abort();
   Py_INCREF(&ViewListType);
 
   SceneType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&SceneType) < 0)
-    return;
+    abort();
   Py_INCREF(&SceneType);
 
   PyModule_AddObject(mod, "Scene", (PyObject*)&SceneType);

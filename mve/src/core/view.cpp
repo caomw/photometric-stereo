@@ -33,9 +33,25 @@ static PyObject* CameraInfo_GetPixelAspect(CameraInfoObj* self);
 static PyObject* CameraInfo_GetDistortion(CameraInfoObj* self);
 
 static PyMethodDef CameraInfo_methods[] = {
-  //{"get_calibration_matrix"},
-  //{"get_projection_matrix", },
+  //{"get_calibration"},
+  //{"get_reprojection", },
+  //{"get_inverse_calibration"},
   {NULL, NULL, 0, NULL}
+};
+
+static PyGetSetDef CameraInfo_getset[] = {
+  //{"position", (getter)CameraInfo_GetPosition, NULL, "Position", NULL},
+  //{"translation", (getter)CameraInfo_GetTranslation, NULL, "Translation Vector", NULL},
+  //{"view_dir", (getter)CameraInfo_GetViewDirection, NULL, "View Direction", NULL},
+  //{"world_to_cam_matrix", (getter)CameraInfo_GetWorldToCamMatrix, NULL, "World to Camera Matrix", NULL},
+  //{"cam_to_world_matrix", (getter)CameraInfo_GetCamToWorldMatrix, NULL, "Camera to World Matrix", NULL},
+  //{"extrinsic_str"}
+  //{"intrinsic_str"}
+  //{"focal_length"}
+  //{"principal_point"}
+  //{"pixel_aspect"}
+  //{"distortion"}
+  {NULL, NULL, NULL, NULL, NULL}
 };
 
 /***************************************************************************
@@ -73,7 +89,6 @@ static PyObject* View_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
 {
   ViewObj* obj = (ViewObj*) subtype->tp_alloc(subtype, 0);
 
-  printf("yooo\n");
   ::new(&(obj->thisptr)) mve::View::Ptr();
 
   return (PyObject*) obj;
@@ -177,7 +192,7 @@ PyObject* ViewObj_Create(mve::View::Ptr ptr)
 {
   PyObject* args = PyTuple_New(0);
   PyObject* kwds = PyDict_New();
-  PyObject* obj = PyType_GenericNew(&ViewType, args, kwds);
+  PyObject* obj = ViewType.tp_new(&ViewType, args, kwds);
   Py_DECREF(args);
   Py_DECREF(kwds);
 
@@ -188,10 +203,9 @@ PyObject* ViewObj_Create(mve::View::Ptr ptr)
 
 void load_View(PyObject* mod)
 {
-  ViewType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&ViewType) < 0)
-    return;
-
+    abort();
   Py_INCREF(&ViewType);
+
   PyModule_AddObject(mod, "View", (PyObject*)&ViewType);
 }
