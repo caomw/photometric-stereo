@@ -2,6 +2,7 @@
 #include <mve/camera.h>
 #include <Python.h>
 #include <structmember.h>
+#include <numpy/arrayobject.h>
 
 /***************************************************************************
  * Camera Info Object
@@ -12,6 +13,23 @@ struct CameraInfoObj {
   PyObject_HEAD
   mve::CameraInfo instance;
 };
+
+static PyObject* CameraInfo_GetPosition(CameraInfoObj* self);
+static PyObject* CameraInfo_GetTranslation(CameraInfoObj* self);
+static PyObject* CameraInfo_GetViewDirection(CameraInfoObj* self);
+static PyObject* CameraInfo_GetWorldToCamMatrix(CameraInfoObj* self);
+static PyObject* CameraInfo_GetCamToWorldMatrix(CameraInfoObj* self);
+static PyObject* CameraInfo_GetWorldToCamRotation(CameraInfoObj* self);
+static PyObject* CameraInfo_GetCamToWorldRotation(CameraInfoObj* self);
+static PyObject* CameraInfo_GetCalibration(CameraInfoObj* self, PyObject* args);
+static PyObject* CameraInfo_GetInverseCalibration(CameraInfoObj* self, PyObject* args);
+//static PyObject* CameraInfo_GetReprojection
+static PyObject* CameraInfo_GetExtrinsicString(CameraInfoObj* self);
+static PyObject* CameraInfo_GetIntrinsicString(CameraInfoObj* self);
+static PyObject* CameraInfo_GetFocalLength(CameraInfoObj* self);
+static PyObject* CameraInfo_GetPrincipalPoint(CameraInfoObj* self);
+static PyObject* CameraInfo_GetPixelAspect(CameraInfoObj* self);
+static PyObject* CameraInfo_GetDistortion(CameraInfoObj* self);
 
 static PyMethodDef CameraInfo_methods[] = {
   //{"get_calibration_matrix"},
@@ -33,78 +51,78 @@ static PyMemberDef View_members[] = {
   { NULL }
 };
 
-static PyObject* View_cache_cleanup(ViewObj *self)
+static PyObject* View_CacheCleanup(ViewObj *self)
 {
   self->thisptr->cache_cleanup();
   return Py_None;
 }
 
 static PyMethodDef View_methods[] = {
-  {"cache_cleanup", (PyCFunction)View_cache_cleanup, METH_NOARGS, "Clean Cache"},
+  {"cache_cleanup", (PyCFunction)View_CacheCleanup, METH_NOARGS, "Clean Cache"},
   {NULL, NULL, 0, NULL}
 };
 
-static int View_init(ViewObj *self, PyObject *args, PyObject *keywords)
+static int View_Init(ViewObj *self, PyObject *args, PyObject *keywords)
 {
   self->thisptr = mve::View::create();
   return 0;
 }
 
-static void View_dealloc(ViewObj *self)
+static void View_Dealloc(ViewObj *self)
 {
   self->thisptr.reset();
 }
 
-static PyObject* View_getId(ViewObj *self)
+static PyObject* View_GetId(ViewObj *self)
 {
   return PyLong_FromSize_t(self->thisptr->get_id());
 }
 
-static int View_setId(ViewObj *self, PyObject *value)
+static int View_SetId(ViewObj *self, PyObject *value)
 {
   self->thisptr->set_id(PyLong_AsSsize_t(value));
   return 0;
 }
 
-static PyObject* View_getName(ViewObj *self)
+static PyObject* View_GetName(ViewObj *self)
 {
   return PyString_FromString(self->thisptr->get_name().c_str());
 }
 
-static int View_setName(ViewObj *self, PyObject *value)
+static int View_SetName(ViewObj *self, PyObject *value)
 {
   self->thisptr->set_name(PyString_AsString(value));
   return 0;
 }
 
-static PyObject* View_getCamera(ViewObj *self)
+static PyObject* View_GetCamera(ViewObj *self)
 {
   return PyString_FromString("yoooo");
 }
 
-static PyObject* View_getAttr(ViewObj *self, PyObject *name)
+static PyObject* View_GetAttr(ViewObj *self, PyObject *name)
 {
   if (PyString_Check(name)){
     const char* cname = PyString_AsString(name);
     if (strcmp(cname, "id") == 0) {
-      return View_getId(self);
+      return View_GetId(self);
     } else if (strcmp(cname, "name") == 0) {
-      return View_getName(self);
+      return View_GetName(self);
     } else if (strcmp(cname, "camera") == 0) {
-      return View_getCamera(self);
+      return View_GetCamera(self);
     }
   }
   return PyObject_GenericGetAttr((PyObject*)self, name);
 }
 
-static int View_setAttr(ViewObj *self, PyObject *name, PyObject *value)
+static int View_SetAttr(ViewObj *self, PyObject *name, PyObject *value)
 {
   if (PyString_Check(name)){
     const char* cname = PyString_AsString(name);
     if (strcmp(cname, "id") == 0) {
-      return View_setId(self, value);
+      return View_SetId(self, value);
     } else if (strcmp(cname, "name") == 0) {
-      return View_setName(self, value);
+      return View_SetName(self, value);
     }
   }
   return PyObject_GenericSetAttr((PyObject*)self, name, value);
@@ -118,7 +136,7 @@ static PyTypeObject ViewType = {
   "mve.core.View", // tp_name
   sizeof(ViewObj), // tp_basicsize
   0, // tp_itemsize
-  (destructor)View_dealloc, // tp_dealloc
+  (destructor)View_Dealloc, // tp_dealloc
   0, // tp_print
   0, // tp_getattr (deprecated)
   0, // tp_setattr (deprecated)
@@ -130,8 +148,8 @@ static PyTypeObject ViewType = {
   0, // tp_hash
   0, // tp_call
   0, // tp_str
-  (getattrofunc)View_getAttr, // tp_getattro
-  (setattrofunc)View_setAttr, // tp_setattro
+  (getattrofunc)View_GetAttr, // tp_getattro
+  (setattrofunc)View_SetAttr, // tp_setattro
   0, // tp_as_buffer
   Py_TPFLAGS_HAVE_WEAKREFS | Py_TPFLAGS_HAVE_CLASS, // tp_flags
   "MVE View", // tp_doc
@@ -149,7 +167,7 @@ static PyTypeObject ViewType = {
   0, // tp_descr_get
   0, // tp_descr_set
   0, // tp_dictoffset
-  (initproc)View_init, // tp_init
+  (initproc)View_Init, // tp_init
   0, // tp_alloc
   0, // tp_new
   0, // tp_free

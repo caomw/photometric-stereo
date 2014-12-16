@@ -8,8 +8,8 @@ s.load('../tmp/b-daman/scene')
 views = s.get_views()
 print(views)
 
-v = views[1]
-print(v)
+for v in views:
+    print(v)
 
 #cam = v.camera
 #print(cam)
