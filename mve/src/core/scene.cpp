@@ -54,6 +54,16 @@ static int Scene_Init(SceneObj *self, PyObject *args, PyObject *keywords)
   return 0;
 }
 
+static PyObject* Scene_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
+{
+  //SceneObj* obj = (SceneObj*) subtype->tp_alloc(subtype, 0);
+  SceneObj* obj = (SceneObj*) PyType_GenericNew(subtype, args, kwds);
+
+  ::new(&(obj->thisptr)) mve::Scene::Ptr();
+
+  return (PyObject*) obj;
+}
+
 static void Scene_Dealloc(SceneObj *self)
 {
   self->thisptr.reset();
@@ -101,7 +111,7 @@ static PyTypeObject SceneType = {
   0, // tp_dictoffset
   (initproc)Scene_Init, // tp_init
   0, // tp_alloc
-  (newfunc)PyType_GenericNew, // tp_new
+  (newfunc)Scene_New, // tp_new
   0, // tp_free
   0, // tp_is_gc
 };

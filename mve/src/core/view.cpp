@@ -16,10 +16,6 @@ struct ViewObj {
   mve::View::Ptr thisptr;
 };
 
-static PyMemberDef View_members[] = {
-  { NULL }
-};
-
 static PyObject* View_CleanupCache(ViewObj *self)
 {
   self->thisptr->cache_cleanup();
@@ -46,7 +42,7 @@ static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
 
   if (name) {
     mve::ImageBase::Ptr ptr = self->thisptr->get_image(name);
-    if (ptr != NULL)
+    if (ptr.get() != NULL)
       return ImageBase_Create(ptr);
     Py_RETURN_NONE;
   }
@@ -88,7 +84,7 @@ static PyObject* View_GetCamera(ViewObj *self, void* closure)
   return CameraInfoObj_Create(self->thisptr->get_camera());
 }
 
-static PyObject* View_IsCameraValid(ViewObj *self, void* closure)
+static PyObject* View_IsValid(ViewObj *self, void* closure)
 {
   if (self->thisptr->is_camera_valid()) {
     Py_RETURN_TRUE;
@@ -100,7 +96,7 @@ static PyGetSetDef View_getset[] = {
   {"id", (getter)View_GetId, (setter)View_SetId, "ID", NULL },
   {"name", (getter)View_GetName, (setter)View_SetName, "Name", NULL},
   {"camera", (getter)View_GetCamera, NULL, "Camera", NULL},
-  {"camera_valid", (getter)View_IsCameraValid, NULL, "Is Camera Valid", NULL},
+  {"valid", (getter)View_IsValid, NULL, "Is Camera Valid", NULL},
   {NULL, NULL, NULL, NULL, NULL}
 };
 
@@ -159,7 +155,7 @@ static PyTypeObject ViewType = {
   0, // tp_iter
   0, // tp_iternext
   View_methods, // tp_methods
-  View_members, // tp_members
+  0, // tp_members
   View_getset, // tp_getset
   0, // tp_base
   0, // tp_dict
