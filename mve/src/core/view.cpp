@@ -26,14 +26,6 @@ static PyObject* View_CleanupCache(ViewObj *self)
   Py_RETURN_NONE;
 }
 
-static PyObject* View_IsCameraValid(ViewObj *self)
-{
-  if (self->thisptr->is_camera_valid()) {
-    Py_RETURN_TRUE;
-  }
-  Py_RETURN_FALSE;
-}
-
 static PyObject* View_HasImage(ViewObj *self, PyObject *arg)
 {
   const char* name = PyString_AsString(arg);
@@ -96,10 +88,19 @@ static PyObject* View_GetCamera(ViewObj *self, void* closure)
   return CameraInfoObj_Create(self->thisptr->get_camera());
 }
 
+static PyObject* View_IsCameraValid(ViewObj *self, void* closure)
+{
+  if (self->thisptr->is_camera_valid()) {
+    Py_RETURN_TRUE;
+  }
+  Py_RETURN_FALSE;
+}
+
 static PyGetSetDef View_getset[] = {
   {"id", (getter)View_GetId, (setter)View_SetId, "ID", NULL },
   {"name", (getter)View_GetName, (setter)View_SetName, "Name", NULL},
   {"camera", (getter)View_GetCamera, NULL, "Camera", NULL},
+  {"camera_valid", (getter)View_IsCameraValid, NULL, "Is Camera Valid", NULL},
   {NULL, NULL, NULL, NULL, NULL}
 };
 
