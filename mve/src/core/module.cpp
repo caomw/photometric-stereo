@@ -5,6 +5,7 @@
 #include "scene.h"
 #include "view.h"
 #include "camera.h"
+#include "image_base.h"
 
 static PyMethodDef module_methods[] = {
   {NULL, NULL, 0, NULL}
@@ -46,6 +47,7 @@ PyMODINIT_FUNC initcore()
   load_Scene(mod);
   load_View(mod);
   load_Camera(mod);
+  load_ImageBase(mod);
 
 #if PY_MAJOR_VERSION >= 3
   return mod;

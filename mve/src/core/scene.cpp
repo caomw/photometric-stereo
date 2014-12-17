@@ -126,13 +126,13 @@ struct SceneObj {
   PyObject *viewlist;
 };
 
-static PyObject* Scene_load(SceneObj *self, PyObject *args)
+static PyObject* Scene_load(SceneObj *self, PyObject *arg)
 {
-  const char* path = PyString_AsString(args);
+  const char* path = PyString_AsString(arg);
   if (path) {
     self->thisptr->load_scene(path);
   }
-  return Py_None;
+  Py_RETURN_NONE;
 }
 
 static PyObject* Scene_GetViews(SceneObj *self, void* closure)

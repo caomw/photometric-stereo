@@ -6,4 +6,3 @@
 PyObject* ImageBase_Create(mve::ImageBase::Ptr ptr);
 
 void load_ImageBase(PyObject *mod);
-

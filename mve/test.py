@@ -11,6 +11,7 @@ print(views)
 for v in views:
     print(v.name)
 
+v = views[0]
 cam = v.camera
 print(cam.position)
 print(cam.translation)
@@ -31,8 +32,8 @@ print(cam.get_calibration(width=1, height=1))
 #print(cam.world_to_cam_matrix)
 #print(cam.cam_to_world_matrix)
 
-#img = v.get_image('undist-L1')
-#print(img.raw)
-#print(img)
-#cv2.imshow("show", cv2.cvtColor(img.raw, cv2.COLOR_RGB2BGR))
-#cv2.waitKey(0)
+img = v.get_image('undist-L1')
+print(img.data.shape)
+print(img.data)
+cv2.imshow("show", cv2.cvtColor(img.data, cv2.COLOR_RGB2BGR))
+cv2.waitKey(0)
