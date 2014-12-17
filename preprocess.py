@@ -39,7 +39,10 @@ print('Reference View: ' + str(ARGS.reference))
 print('Views to warp: ' + str(ARGS.view))
 VIEWS = SCENE.views
 REF_VIEW = VIEWS[ARGS.reference]
+if not REF_VIEW.camera_valid:
+    raise RuntimeError('Invalid Camera of Reference View')
 REF_IMG = REF_VIEW.get_image(ARGS.image)
+
 WIDTH, HEIGHT = REF_IMG.width, REF_IMG.height
 print('Ref Image Dim = (' + str(WIDTH) + ', ' + str(HEIGHT) + ')')
 VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
@@ -325,6 +328,14 @@ NORMAL_IMAGE = numpy.flipud(output)
 #cv2.imshow("Normal", cv2.cvtColor(RESULT, cv2.COLOR_RGB2BGR))
 cv2.imwrite(join(OUTPUT_ROOT, 'normal-{}.tiff'.format(REF_VIEW.id)), NORMAL_IMAGE)
 del NORMAL_IMAGE
+
+# Readback Depth
+glBindTexture(GL_TEXTURE_2D, DEPTH_TEX)
+output = glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, None)
+output = numpy.ndarray(shape=(HEIGHT,WIDTH), dtype=numpy.uint16, order='C', buffer=output)
+DEPTH_IMAGE = numpy.flipud(output)
+cv2.imwrite(join(OUTPUT_ROOT, 'depth-{}.tiff'.format(REF_VIEW.id)), DEPTH_IMAGE)
+del DEPTH_IMAGE
 
 # Draw Warpped Images
 glBindTexture(GL_TEXTURE_2D, COLOR_TEX)
