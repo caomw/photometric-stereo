@@ -20,7 +20,7 @@ static PyMemberDef View_members[] = {
   { NULL }
 };
 
-static PyObject* View_CacheCleanup(ViewObj *self)
+static PyObject* View_CleanupCache(ViewObj *self)
 {
   self->thisptr->cache_cleanup();
   Py_RETURN_NONE;
@@ -63,7 +63,7 @@ static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
 }
 
 static PyMethodDef View_methods[] = {
-  {"cache_cleanup", (PyCFunction)View_CacheCleanup, METH_NOARGS, "Clean Cache"},
+  {"cleanup_cache", (PyCFunction)View_CleanupCache, METH_NOARGS, "Clean Cache"},
   {"has_image", (PyCFunction)View_HasImage, METH_O, "Check if image embedding exists"},
   {"get_image", (PyCFunction)View_GetImage, METH_O, "Get image embedding"},
   {NULL, NULL, 0, NULL}

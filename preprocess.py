@@ -3,7 +3,7 @@ import sys
 ROOT_PATH = dirname(abspath(__file__))
 sys.path.append(join(ROOT_PATH, 'mve'))
 sys.path.append(join(ROOT_PATH, 'plyfile'))
-import mve, numpy, cv2
+import mve.core as mve, numpy, cv2
 from argparse import ArgumentParser
 from plyfile import PlyData
 
@@ -41,7 +41,7 @@ VIEWS = filter(lambda x: x.id in ARGS.view, VIEWS)
 def camera_projection_matrix(cam, width, height, znear, zfar):
     view_mat = cam.world_to_cam_matrix
     proj_mat = numpy.zeros(shape=(4,4), dtype=numpy.float32)
-    proj_mat[0:3,0:3] = cam.calibration_matrix(width, height)
+    proj_mat[0:3,0:3] = cam.get_calibration(width, height)
     proj_mat[2,2] = (znear+zfar) / (zfar-znear)
     proj_mat[2,3] = (-2*znear*zfar) / (zfar-znear)
     proj_mat[3,:] = [0, 0, 1, 0]
@@ -262,7 +262,7 @@ for view in VIEWS:
     #img.fill(255)
     # X: Because OpenGL Texture's origin is at left-bottom, not left-top
     # img = numpy.flipud(img)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img.raw)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img.data)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
