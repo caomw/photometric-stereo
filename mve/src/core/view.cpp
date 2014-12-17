@@ -121,6 +121,7 @@ static PyObject* View_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
 
 static void View_Dealloc(ViewObj *self)
 {
+  //printf("view %d is deallocated\n", self->thisptr->get_id());
   self->thisptr.reset();
 }
 

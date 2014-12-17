@@ -101,6 +101,7 @@ static PyObject* ImageBase_New(PyTypeObject *subtype, PyObject *args, PyObject *
 
 static void ImageBase_Dealloc(ImageBaseObj *self)
 {
+  //printf("image is deallocated\n");
   self->thisptr.reset();
 }
 
