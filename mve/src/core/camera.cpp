@@ -3,6 +3,7 @@
 #include <Python.h>
 #include <structmember.h>
 #include <numpy/arrayobject.h>
+#include <new>
 
 /***************************************************************************
  * Camera Info Object
@@ -180,6 +181,17 @@ static PyGetSetDef CameraInfo_getset[] = {
   {NULL, NULL, NULL, NULL, NULL}
 };
 
+static PyObject* CameraInfo_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
+{
+  CameraInfoObj* self = (CameraInfoObj*) subtype->tp_alloc(subtype, 0);
+
+  if (self != NULL) {
+    ::new(&(self->instance)) mve::CameraInfo();
+  }
+
+  return (PyObject*) self;
+}
+
 static void CameraInfo_Dealloc(CameraInfoObj *self)
 {
   self->ob_type->tp_free((PyObject*) self);
@@ -227,7 +239,7 @@ static PyTypeObject CameraInfoType = {
   0, // tp_dictoffset
   (initproc)0, // tp_init
   0, // tp_alloc
-  (newfunc)PyType_GenericNew, // tp_new
+  (newfunc)CameraInfo_New, // tp_new
   0, // tp_free
   0, // tp_is_gc
 };
