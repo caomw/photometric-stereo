@@ -91,18 +91,20 @@ static int ImageBase_Init(ImageBaseObj *self, PyObject *args, PyObject *kwds)
 
 static PyObject* ImageBase_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
 {
-  //ImageBaseObj* obj = (ImageBaseObj*) subtype->tp_alloc(subtype, 0);
-  ImageBaseObj* obj = (ImageBaseObj*) PyType_GenericNew(subtype, args, kwds);
+  ImageBaseObj* self = (ImageBaseObj*) subtype->tp_alloc(subtype, 0);
 
-  ::new(&(obj->thisptr)) mve::ImageBase::Ptr();
+  if (self != NULL) {
+    ::new(&(self->thisptr)) mve::ImageBase::Ptr();
+  }
 
-  return (PyObject*) obj;
+  return (PyObject*) self;
 }
 
 static void ImageBase_Dealloc(ImageBaseObj *self)
 {
   //printf("image is deallocated\n");
   self->thisptr.reset();
+  self->ob_type->tp_free((PyObject*) self);
 }
 
 static PyTypeObject ImageBaseType = {

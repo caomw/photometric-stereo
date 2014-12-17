@@ -108,18 +108,20 @@ static int View_Init(ViewObj *self, PyObject *args, PyObject *kwds)
 
 static PyObject* View_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
 {
-  //ViewObj* obj = (ViewObj*) subtype->tp_alloc(subtype, 0);
-  ViewObj* obj = (ViewObj*) PyType_GenericNew(subtype, args, kwds);
+  ViewObj* self = (ViewObj*) subtype->tp_alloc(subtype, 0);
 
-  ::new(&(obj->thisptr)) mve::View::Ptr();
+  if (self != NULL) {
+    ::new(&(self->thisptr)) mve::View::Ptr();
+  }
 
-  return (PyObject*) obj;
+  return (PyObject*) self;
 }
 
 static void View_Dealloc(ViewObj *self)
 {
   //printf("view %d is deallocated\n", self->thisptr->get_id());
   self->thisptr.reset();
+  self->ob_type->tp_free((PyObject*) self);
 }
 
 static PyTypeObject ViewType = {

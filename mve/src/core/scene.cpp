@@ -56,17 +56,19 @@ static int Scene_Init(SceneObj *self, PyObject *args, PyObject *keywords)
 
 static PyObject* Scene_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
 {
-  //SceneObj* obj = (SceneObj*) subtype->tp_alloc(subtype, 0);
-  SceneObj* obj = (SceneObj*) PyType_GenericNew(subtype, args, kwds);
+  SceneObj* self = (SceneObj*) subtype->tp_alloc(subtype, 0);
 
-  ::new(&(obj->thisptr)) mve::Scene::Ptr();
+  if (self != NULL) {
+    ::new(&(self->thisptr)) mve::Scene::Ptr();
+  }
 
-  return (PyObject*) obj;
+  return (PyObject*) self;
 }
 
 static void Scene_Dealloc(SceneObj *self)
 {
   self->thisptr.reset();
+  self->ob_type->tp_free((PyObject*) self);
 }
 
 static PyTypeObject SceneType = {

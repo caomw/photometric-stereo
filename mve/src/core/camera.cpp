@@ -180,12 +180,17 @@ static PyGetSetDef CameraInfo_getset[] = {
   {NULL, NULL, NULL, NULL, NULL}
 };
 
+static void CameraInfo_Dealloc(CameraInfoObj *self)
+{
+  self->ob_type->tp_free((PyObject*) self);
+}
+
 static PyTypeObject CameraInfoType = {
   PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.CameraInfo", // tp_name
   sizeof(CameraInfoObj), // tp_basicsize
   0, // tp_itemsize
-  0, // tp_dealloc
+  (destructor)CameraInfo_Dealloc, // tp_dealloc
   0, // tp_print
   0, // tp_getattr (deprecated)
   0, // tp_setattr (deprecated)
