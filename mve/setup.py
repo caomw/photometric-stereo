@@ -5,13 +5,6 @@ from os.path import join, isdir
 from glob import glob, iglob
 
 try:
-    from Cython.Build import cythonize
-except:
-    print('Cython is required to setup')
-    print('pip install Cython')
-    sys.exit(1)
-
-try:
     import numpy
 except:
     print('Numpy is required')
@@ -39,20 +32,17 @@ def get_library_dirs():
 def get_libraries():
     return ['mve', 'mve_util']
 
-def make_extensions():
-    extensions = []
-    for path in iglob(join('mve', '*.pyx')):
-        e = Extension(path.replace(os.path.sep, '.')[:-4],
-                sources = [path],
-                include_dirs = get_include_dirs(),
-                library_dirs = get_library_dirs(),
-                libraries = get_libraries(),
-                language = 'c++'
-            )
-        extensions.append(e)
-    return extensions
+def extensions():
+    return [Extension('mve.core', 
+                      sources = glob(join('src', 'core', '*.cpp')),
+                      include_dirs = get_include_dirs(),
+                      library_dirs = get_library_dirs(),
+                      libraries = get_libraries(),
+                      language = 'c++',
+                      define_macros = [('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')]
+                      )]
 
 setup(
     name = 'mve',
-    ext_modules = cythonize(make_extensions())
+    ext_modules = extensions()
 )
