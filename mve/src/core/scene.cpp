@@ -9,6 +9,8 @@
  *
  */
 
+/*
+
 struct ViewListObj {
   PyObject_HEAD
   mve::Scene::ViewList *thisptr;
@@ -115,6 +117,8 @@ static PyObject* ViewListObj_Create(mve::Scene::ViewList* viewlist)
   return obj;
 }
 
+*/
+
 /***************************************************************************
  * Scene Object
  *
@@ -123,7 +127,7 @@ static PyObject* ViewListObj_Create(mve::Scene::ViewList* viewlist)
 struct SceneObj {
   PyObject_HEAD
   mve::Scene::Ptr thisptr;
-  PyObject *viewlist;
+  //PyObject *viewlist;
 };
 
 static PyObject* Scene_load(SceneObj *self, PyObject *arg)
@@ -139,12 +143,20 @@ static PyObject* Scene_GetViews(SceneObj *self, void* closure)
 {
   mve::Scene::ViewList& views = self->thisptr->get_views();
 
-  if (!self->viewlist) {
-    self->viewlist = ViewListObj_Create(&views);
+  //if (!self->viewlist) {
+  //  self->viewlist = ViewListObj_Create(&views);
+  //}
+
+  //Py_INCREF(self->viewlist);
+  //return (PyObject*) self->viewlist;
+
+  size_t n = views.size();
+  PyObject* list = PyList_New(n);
+  for (size_t i = 0; i < n; ++i) {
+    PyList_SetItem(list, i, ViewObj_Create(views[i]));
   }
 
-  Py_INCREF(self->viewlist);
-  return (PyObject*) self->viewlist;
+  return list;
 }
 
 static PyMethodDef Scene_methods[] = {
@@ -168,10 +180,10 @@ static void Scene_Dealloc(SceneObj *self)
 {
   self->thisptr.reset();
 
-  if (self->viewlist) {
-    Py_DECREF(self->viewlist);
-    self->viewlist = NULL;
-  }
+  //if (self->viewlist) {
+  //  Py_DECREF(self->viewlist);
+  //  self->viewlist = NULL;
+  //}
 }
 
 static PyTypeObject SceneType = {
@@ -223,9 +235,9 @@ static PyTypeObject SceneType = {
 
 void load_Scene(PyObject* mod)
 {
-  if (PyType_Ready(&ViewListType) < 0)
-    abort();
-  Py_INCREF(&ViewListType);
+  //if (PyType_Ready(&ViewListType) < 0)
+  //  abort();
+  //Py_INCREF(&ViewListType);
 
   if (PyType_Ready(&SceneType) < 0)
     abort();
