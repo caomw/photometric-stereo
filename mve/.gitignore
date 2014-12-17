@@ -1,2 +1,4 @@
 *.so
 /build
+/mve/*.cpp
+/mve/*.c

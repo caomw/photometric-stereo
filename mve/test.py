@@ -11,12 +11,22 @@ print(views)
 for v in views:
     print(v.name)
 
-#cam = v.camera
-#print(cam)
+cam = v.camera
+print(cam.position)
+print(cam.translation)
+print(cam.view_dir)
+print(cam.world_to_cam_matrix)
+print(cam.cam_to_world_matrix)
+print(cam.world_to_cam_rotation)
+print(cam.cam_to_world_rotation)
+print(cam.focal_length)
+print(cam.principal_point)
+print(cam.pixel_aspect)
+print(cam.distortion)
+
+print(cam.get_calibration(width=1, height=1))
 
 #cam = v.camera
-#print(cam.principal_point)
-#print(cam.translation_vector)
 #print(cam.rotation_matrix)
 #print(cam.world_to_cam_matrix)
 #print(cam.cam_to_world_matrix)

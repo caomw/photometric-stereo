@@ -1,58 +1,9 @@
+#include "view.h"
+#include "camera.h"
 #include <mve/view.h>
-#include <mve/camera.h>
 #include <Python.h>
 #include <structmember.h>
-#include <numpy/arrayobject.h>
 #include <new>
-
-/***************************************************************************
- * Camera Info Object
- *
- */
-
-struct CameraInfoObj {
-  PyObject_HEAD
-  mve::CameraInfo instance;
-};
-
-static PyObject* CameraInfo_GetPosition(CameraInfoObj* self);
-static PyObject* CameraInfo_GetTranslation(CameraInfoObj* self);
-static PyObject* CameraInfo_GetViewDirection(CameraInfoObj* self);
-static PyObject* CameraInfo_GetWorldToCamMatrix(CameraInfoObj* self);
-static PyObject* CameraInfo_GetCamToWorldMatrix(CameraInfoObj* self);
-static PyObject* CameraInfo_GetWorldToCamRotation(CameraInfoObj* self);
-static PyObject* CameraInfo_GetCamToWorldRotation(CameraInfoObj* self);
-static PyObject* CameraInfo_GetCalibration(CameraInfoObj* self, PyObject* args);
-static PyObject* CameraInfo_GetInverseCalibration(CameraInfoObj* self, PyObject* args);
-//static PyObject* CameraInfo_GetReprojection
-static PyObject* CameraInfo_GetExtrinsicString(CameraInfoObj* self);
-static PyObject* CameraInfo_GetIntrinsicString(CameraInfoObj* self);
-static PyObject* CameraInfo_GetFocalLength(CameraInfoObj* self);
-static PyObject* CameraInfo_GetPrincipalPoint(CameraInfoObj* self);
-static PyObject* CameraInfo_GetPixelAspect(CameraInfoObj* self);
-static PyObject* CameraInfo_GetDistortion(CameraInfoObj* self);
-
-static PyMethodDef CameraInfo_methods[] = {
-  //{"get_calibration"},
-  //{"get_reprojection", },
-  //{"get_inverse_calibration"},
-  {NULL, NULL, 0, NULL}
-};
-
-static PyGetSetDef CameraInfo_getset[] = {
-  //{"position", (getter)CameraInfo_GetPosition, NULL, "Position", NULL},
-  //{"translation", (getter)CameraInfo_GetTranslation, NULL, "Translation Vector", NULL},
-  //{"view_dir", (getter)CameraInfo_GetViewDirection, NULL, "View Direction", NULL},
-  //{"world_to_cam_matrix", (getter)CameraInfo_GetWorldToCamMatrix, NULL, "World to Camera Matrix", NULL},
-  //{"cam_to_world_matrix", (getter)CameraInfo_GetCamToWorldMatrix, NULL, "Camera to World Matrix", NULL},
-  //{"extrinsic_str"}
-  //{"intrinsic_str"}
-  //{"focal_length"}
-  //{"principal_point"}
-  //{"pixel_aspect"}
-  //{"distortion"}
-  {NULL, NULL, NULL, NULL, NULL}
-};
 
 /***************************************************************************
  * View Object
@@ -124,7 +75,7 @@ static int View_SetName(ViewObj *self, PyObject *value, void* closure)
 
 static PyObject* View_GetCamera(ViewObj *self, void* closure)
 {
-  return PyString_FromString("yoooo");
+  return CameraInfoObj_Create(self->thisptr->get_camera());
 }
 
 static PyGetSetDef View_getset[] = {
@@ -135,10 +86,7 @@ static PyGetSetDef View_getset[] = {
 };
 
 static PyTypeObject ViewType = {
-#if PY_MAJOR_VERSION < 3
-  PyObject_HEAD_INIT(NULL)
-#endif
-  0, // ob_size
+  PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.View", // tp_name
   sizeof(ViewObj), // tp_basicsize
   0, // tp_itemsize

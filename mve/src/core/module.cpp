@@ -4,6 +4,7 @@
 #define MODULE_NAME core
 #include "scene.h"
 #include "view.h"
+#include "camera.h"
 
 static PyMethodDef module_methods[] = {
   {NULL, NULL, 0, NULL}
@@ -23,6 +24,13 @@ PyMODINIT_FUNC PyInit_core()
 PyMODINIT_FUNC initcore()
 #endif
 {
+  // Create Core Module
+#if PY_MAJOR_VERSION >= 3
+  PyObject* mod = PyModule_Create(&mve_moduledef);
+#else
+  PyObject* mod = Py_InitModule(MODULE_STR, module_methods);
+#endif
+
   // Import Numpy Array API
   import_array();
 
@@ -34,16 +42,10 @@ PyMODINIT_FUNC initcore()
     // TODO: raise API incompatibility error
   }
 
-  // Create Core Module
-#if PY_MAJOR_VERSION >= 3
-  PyObject* mod = PyModule_Create(&mve_moduledef);
-#else
-  PyObject* mod = Py_InitModule(MODULE_STR, module_methods);
-#endif
-
   // Load Class
   load_Scene(mod);
   load_View(mod);
+  load_Camera(mod);
 
 #if PY_MAJOR_VERSION >= 3
   return mod;

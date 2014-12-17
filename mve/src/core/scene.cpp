@@ -1,3 +1,4 @@
+#include "scene.h"
 #include <mve/scene.h>
 #include <Python.h>
 #include <structmember.h>
@@ -54,8 +55,7 @@ static PySequenceMethods ViewList_seq_methods = {
 };
 
 static PyTypeObject ViewListType = {
-  PyObject_HEAD_INIT(NULL)
-  0, // ob_size
+  PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.Scene.ViewList", // tp_name
   sizeof(ViewListObj), // tp_basicsize
   0, // tp_itemsize
@@ -175,10 +175,7 @@ static void Scene_Dealloc(SceneObj *self)
 }
 
 static PyTypeObject SceneType = {
-#if PY_MAJOR_VERSION < 3
-  PyObject_HEAD_INIT(NULL)
-#endif
-  0, // ob_size
+  PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.Scene", // tp_name
   sizeof(SceneObj), // tp_basicsize
   0, // tp_itemsize
@@ -218,6 +215,10 @@ static PyTypeObject SceneType = {
   0, // tp_descr_set
   0, // tp_dictoffset
   (initproc)Scene_Init, // tp_init
+  0, // tp_alloc
+  (newfunc)PyType_GenericNew, // tp_new
+  0, // tp_free
+  0, // tp_is_gc
 };
 
 void load_Scene(PyObject* mod)
@@ -226,7 +227,6 @@ void load_Scene(PyObject* mod)
     abort();
   Py_INCREF(&ViewListType);
 
-  SceneType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&SceneType) < 0)
     abort();
   Py_INCREF(&SceneType);
