@@ -2,9 +2,14 @@
 #include "camera.h"
 #include "image_base.h"
 #include <mve/view.h>
+#include <new>
 #include <Python.h>
 #include <structmember.h>
-#include <new>
+
+#if PY_MAJOR_VERSION >= 3
+#  define PyString_FromString PyUnicode_FromString
+#  define PyString_FromFormat PyUnicode_FromFormat
+#endif
 
 /***************************************************************************
  * View Object
@@ -24,7 +29,14 @@ static PyObject* View_CleanupCache(ViewObj *self)
 
 static PyObject* View_HasImage(ViewObj *self, PyObject *arg)
 {
-  const char* name = PyString_AsString(arg);
+  if (PyUnicode_Check(arg)) {
+    PyObject *bytes = PyUnicode_AsUTF8String(arg);
+    PyObject *result = View_HasImage(self, bytes);
+    Py_DECREF(bytes);
+    return result;
+  }
+
+  const char* name = PyBytes_AsString(arg);
   if (!name)
     return NULL;
 
@@ -36,7 +48,14 @@ static PyObject* View_HasImage(ViewObj *self, PyObject *arg)
 
 static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
 {
-  const char* name = PyString_AsString(arg);
+  if (PyUnicode_Check(arg)) {
+    PyObject *bytes = PyUnicode_AsUTF8String(arg);
+    PyObject *result = View_GetImage(self, bytes);
+    Py_DECREF(bytes);
+    return result;
+  }
+
+  const char* name = PyBytes_AsString(arg);
   if (!name)
     return NULL;
 
@@ -66,7 +85,14 @@ static PyObject* View_SetImage(ViewObj *self, PyObject *args)
 
 static PyObject* View_RemoveImage(ViewObj *self, PyObject *arg)
 {
-  const char* name = PyString_AsString(arg);
+  if (PyUnicode_Check(arg)) {
+    PyObject *bytes = PyUnicode_AsUTF8String(arg);
+    PyObject *result = View_RemoveImage(self, bytes);
+    Py_DECREF(bytes);
+    return result;
+  }
+
+  const char* name = PyBytes_AsString(arg);
   if (!name)
     return NULL;
 
@@ -102,10 +128,19 @@ static PyObject* View_GetName(ViewObj *self, void* closure)
 
 static int View_SetName(ViewObj *self, PyObject *value, void* closure)
 {
-  const char * name = PyString_AsString(value);
+  if (PyUnicode_Check(value)) {
+    PyObject *bytes = PyUnicode_AsUTF8String(value);
+    int result = View_SetName(self, bytes, closure);
+    Py_DECREF(bytes);
+    return result;
+  }
+
+  const char * name = PyBytes_AsString(value);
   if (!name)
     return -1;
+
   self->thisptr->set_name(name);
+
   return 0;
 }
 

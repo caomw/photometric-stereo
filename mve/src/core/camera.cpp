@@ -5,6 +5,11 @@
 #include <structmember.h>
 #include "numpy_array.h"
 
+#if PY_MAJOR_VERSION >= 3
+#  define PyString_FromString PyUnicode_FromString
+#  define PyString_FromFormat PyUnicode_FromFormat
+#endif
+
 /***************************************************************************
  * Camera Info Object
  *

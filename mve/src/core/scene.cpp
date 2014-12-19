@@ -4,6 +4,11 @@
 #include <structmember.h>
 #include "view.h"
 
+#if PY_MAJOR_VERSION >= 3
+#  define PyString_FromString PyUnicode_FromString
+#  define PyString_FromFormat PyUnicode_FromFormat
+#endif
+
 /***************************************************************************
  * Scene Object
  *
@@ -17,7 +22,14 @@ struct SceneObj {
 
 static PyObject* Scene_Load(SceneObj *self, PyObject *arg)
 {
-  const char* path = PyString_AsString(arg);
+  if (PyUnicode_Check(arg)) {
+    PyObject *bytes = PyUnicode_AsUTF8String(arg);
+    PyObject *result = Scene_Load(self, bytes);
+    Py_DECREF(bytes);
+    return result;
+  }
+
+  const char* path = PyBytes_AsString(arg);
   if (!path)
     return NULL;
 

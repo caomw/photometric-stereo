@@ -4,6 +4,10 @@
 #include <Python.h>
 #include "numpy_array.h"
 
+#if PY_MAJOR_VERSION >= 3
+#  define PyString_FromFormat PyUnicode_FromFormat
+#endif
+
 static int _ImageTypeToNumpyDataType(mve::ImageType ty)
 {
   switch (ty) {
