@@ -50,10 +50,28 @@ static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
   return NULL;
 }
 
+//static PyObject* View_SetImage(ViewObj *self, PyObject *args)
+//{
+//}
+
+static PyObject* View_RemoveImage(ViewObj *self, PyObject *arg)
+{
+  const char* name = PyString_AsString(arg);
+
+  if (name) {
+    self->thisptr->remove_embedding(name);
+    Py_RETURN_NONE;
+  }
+
+  return NULL;
+}
+
 static PyMethodDef View_methods[] = {
   {"cleanup_cache", (PyCFunction)View_CleanupCache, METH_NOARGS, "Clean Cache"},
   {"has_image", (PyCFunction)View_HasImage, METH_O, "Check if image embedding exists"},
-  {"get_image", (PyCFunction)View_GetImage, METH_O, "Get image embedding"},
+  {"get_image", (PyCFunction)View_GetImage, METH_O, "Get an image embedding"},
+  //{"set_image"},
+  {"remove_image", (PyCFunction)View_RemoveImage, METH_O, "Remove an image embedding"},
   {NULL, NULL, 0, NULL}
 };
 
@@ -92,17 +110,33 @@ static PyObject* View_IsValid(ViewObj *self, void* closure)
   Py_RETURN_FALSE;
 }
 
+static PyObject* View_GetFilename(ViewObj *self, void* closure)
+{
+  return PyString_FromString(self->thisptr->get_filename().c_str());
+}
+
 static PyGetSetDef View_getset[] = {
   {"id", (getter)View_GetId, (setter)View_SetId, "ID", NULL },
   {"name", (getter)View_GetName, (setter)View_SetName, "Name", NULL},
   {"camera", (getter)View_GetCamera, NULL, "Camera", NULL},
   {"valid", (getter)View_IsValid, NULL, "Is Camera Valid", NULL},
+  {"filename", (getter)View_GetFilename, NULL, "Filename", NULL},
   {NULL, NULL, NULL, NULL, NULL}
 };
 
 static int View_Init(ViewObj *self, PyObject *args, PyObject *kwds)
 {
-  self->thisptr = mve::View::create();
+  char* klist[] = { "filename", NULL };
+  const char* filename = NULL;
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:init", klist, &filename))
+    return -1;
+
+  if (filename)
+    self->thisptr = mve::View::create(filename);
+  else
+    self->thisptr = mve::View::create();
+
   return 0;
 }
 
@@ -124,6 +158,13 @@ static void View_Dealloc(ViewObj *self)
   self->ob_type->tp_free((PyObject*) self);
 }
 
+static PyObject* View_Representation(ViewObj *self)
+{
+  return PyString_FromFormat("View(id=%zu, name=%s)",
+                             self->thisptr->get_id(),
+                             self->thisptr->get_name().c_str());
+}
+
 static PyTypeObject ViewType = {
   PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.View", // tp_name
@@ -138,7 +179,7 @@ static PyTypeObject ViewType = {
 #else
   0, // reserved
 #endif
-  0, // tp_repr
+  (reprfunc)View_Representation, // tp_repr
   0, // tp_as_number
   0, // tp_as_sequence
   0, // tp_as_mapping

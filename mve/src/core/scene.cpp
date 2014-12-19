@@ -15,12 +15,18 @@ struct SceneObj {
   //PyObject *viewlist;
 };
 
-static PyObject* Scene_load(SceneObj *self, PyObject *arg)
+static PyObject* Scene_Load(SceneObj *self, PyObject *arg)
 {
   const char* path = PyString_AsString(arg);
   if (path) {
     self->thisptr->load_scene(path);
   }
+  Py_RETURN_NONE;
+}
+
+static PyObject* Scene_CleanupCache(SceneObj *self, PyObject *arg)
+{
+  self->thisptr->cache_cleanup();
   Py_RETURN_NONE;
 }
 
@@ -37,13 +43,20 @@ static PyObject* Scene_GetViews(SceneObj *self, void* closure)
   return list;
 }
 
+static PyObject* Scene_GetPath(SceneObj *self, void* closure)
+{
+  return PyString_FromString(self->thisptr->get_path().c_str());
+}
+
 static PyMethodDef Scene_methods[] = {
-  {"load", (PyCFunction)Scene_load, METH_O, "Load Scene"},
+  {"load", (PyCFunction)Scene_Load, METH_O, "Load Scene"},
+  {"cleanup_cache", (PyCFunction)Scene_CleanupCache, METH_NOARGS, "Clean Cache"},
   {NULL, NULL, 0, NULL}
 };
 
 static PyGetSetDef Scene_getset[] = {
   {"views", (getter)Scene_GetViews, NULL, "Views", NULL },
+  {"path", (getter)Scene_GetPath, NULL, "Base Path", NULL},
   {NULL, NULL, NULL, NULL, NULL}
 };
 
@@ -71,6 +84,12 @@ static void Scene_Dealloc(SceneObj *self)
   self->ob_type->tp_free((PyObject*) self);
 }
 
+static PyObject* Scene_Representation(SceneObj *self)
+{
+  return PyString_FromFormat("Scene(path=%s)",
+                             self->thisptr->get_path().c_str());
+}
+
 static PyTypeObject SceneType = {
   PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.Scene", // tp_name
@@ -85,7 +104,7 @@ static PyTypeObject SceneType = {
 #else
   0, // reserved
 #endif
-  0, // tp_repr
+  (reprfunc)Scene_Representation, // tp_repr
   0, // tp_as_number
   0, // tp_as_sequence
   0, // tp_as_mapping

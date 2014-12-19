@@ -2,12 +2,14 @@
 import cv2
 from mve.core import Scene
 s = Scene()
-s.load('../tmp/daibutsu/scene')
+s.load('../tmp/b-daman/scene')
+print(s)
 #s.load(0)
 
 views = s.views
 
 for view in views:
+    print(view)
     #print(view.id)
     cam = view.camera
     #if not view.valid:
@@ -25,9 +27,10 @@ for view in views:
     #print(cam.distortion)
     #print(cam.get_calibration(width=1, height=1))
     img = view.get_image('undist-L1')
+    print(img)
     if img is not None:
         cv2.imshow("show", cv2.cvtColor(img.data, cv2.COLOR_RGB2BGR))
         cv2.waitKey(0)
     else:
-        print("View[{}] has no image".format(view.id))
+        print("{} has no image".format(view))
     view.cleanup_cache()

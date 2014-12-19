@@ -107,6 +107,15 @@ static void ImageBase_Dealloc(ImageBaseObj *self)
   self->ob_type->tp_free((PyObject*) self);
 }
 
+static PyObject* ImageBase_Representation(ImageBaseObj *self)
+{
+  return PyString_FromFormat("ImageBase(%d x %d x %s[%d])",
+                             self->thisptr->width(),
+                             self->thisptr->height(),
+                             self->thisptr->get_type_string(),
+                             self->thisptr->channels());
+}
+
 static PyTypeObject ImageBaseType = {
   PyVarObject_HEAD_INIT(NULL, 0)
   "mve.core.ImageBase", // tp_name
@@ -121,7 +130,7 @@ static PyTypeObject ImageBaseType = {
 #else
   0, // reserved
 #endif
-  0, // tp_repr
+  (reprfunc)ImageBase_Representation, // tp_repr
   0, // tp_as_number
   0, // tp_as_sequence
   0, // tp_as_mapping

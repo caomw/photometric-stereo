@@ -97,7 +97,7 @@ static PyObject* CameraInfo_GetCalibration(CameraInfoObj* self, PyObject* args, 
   char* klist[] = { "width", "height", NULL };
   float width, height;
 
-  if (PyArg_ParseTupleAndKeywords(args, kwds, "ff", klist, &width, &height)) {
+  if (PyArg_ParseTupleAndKeywords(args, kwds, "ff:get_calibration", klist, &width, &height)) {
     npy_intp dims[] = { 3, 3 };
     PyObject* arr = PyArray_SimpleNew(2, dims, NPY_FLOAT32);
 
