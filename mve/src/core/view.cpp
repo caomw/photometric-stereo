@@ -61,7 +61,7 @@ static PyObject* View_SetImage(ViewObj *self, PyObject *args)
   mve::ImageBase::Ptr ptr = ImageBase_GetImagePtr(image);
   if (ptr == NULL)
     return NULL;
-  
+
   self->thisptr->set_image(name, ptr);
 
   Py_RETURN_NONE;
@@ -168,7 +168,7 @@ static void View_Dealloc(ViewObj *self)
 {
   //printf("view %d is deallocated\n", self->thisptr->get_id());
   self->thisptr.reset();
-  self->ob_type->tp_free((PyObject*) self);
+  Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
 static PyObject* View_Representation(ViewObj *self)

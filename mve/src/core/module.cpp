@@ -1,11 +1,13 @@
 #include <Python.h>
-#include <numpy/arrayobject.h>
 #define MODULE_STR "mve.core"
 #define MODULE_NAME core
 #include "scene.h"
 #include "view.h"
 #include "camera.h"
 #include "image_base.h"
+
+#define IMPORT_ARRAY
+#include "numpy_array.h"
 
 static PyMethodDef module_methods[] = {
   {NULL, NULL, 0, NULL}

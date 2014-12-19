@@ -91,7 +91,7 @@ static PyObject* Scene_New(PyTypeObject *subtype, PyObject *args, PyObject *kwds
 static void Scene_Dealloc(SceneObj *self)
 {
   self->thisptr.reset();
-  self->ob_type->tp_free((PyObject*) self);
+  Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
 static PyObject* Scene_Representation(SceneObj *self)

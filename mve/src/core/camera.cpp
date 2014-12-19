@@ -1,9 +1,9 @@
 #include "camera.h"
 #include <mve/camera.h>
+#include <new>
 #include <Python.h>
 #include <structmember.h>
-#include <numpy/arrayobject.h>
-#include <new>
+#include "numpy_array.h"
 
 /***************************************************************************
  * Camera Info Object
@@ -194,7 +194,7 @@ static PyObject* CameraInfo_New(PyTypeObject *subtype, PyObject *args, PyObject 
 
 static void CameraInfo_Dealloc(CameraInfoObj *self)
 {
-  self->ob_type->tp_free((PyObject*) self);
+  Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
 static PyTypeObject CameraInfoType = {
@@ -270,9 +270,6 @@ mve::CameraInfo& CameraInfo_AsMveCameraInfo(PyObject* self)
 
 void load_Camera(PyObject* mod)
 {
-  // Import Numpy API
-  import_array();
-
   if (PyType_Ready(&CameraInfoType) < 0)
     abort();
   Py_INCREF(&CameraInfoType);

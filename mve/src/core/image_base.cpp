@@ -2,7 +2,7 @@
 #include <mve/image_base.h>
 #include <mve/image.h>
 #include <Python.h>
-#include <numpy/arrayobject.h>
+#include "numpy_array.h"
 
 static int _ImageTypeToNumpyDataType(mve::ImageType ty)
 {
@@ -156,7 +156,7 @@ static void ImageBase_Dealloc(ImageBaseObj *self)
 {
   //printf("image is deallocated\n");
   self->thisptr.reset();
-  self->ob_type->tp_free((PyObject*) self);
+  Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
 static PyObject* ImageBase_Representation(ImageBaseObj *self)
@@ -248,9 +248,6 @@ mve::ImageBase::Ptr ImageBase_GetImagePtr(PyObject* obj)
 
 void load_ImageBase(PyObject *mod)
 {
-  // Import Numpy API
-  import_array();
-
   if (PyType_Ready(&ImageBaseType) < 0)
     abort();
   Py_INCREF(&ImageBaseType);
