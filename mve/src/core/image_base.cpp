@@ -1,5 +1,6 @@
 #include "image_base.h"
 #include <mve/image_base.h>
+#include <mve/image.h>
 #include <Python.h>
 #include <numpy/arrayobject.h>
 
@@ -92,13 +93,51 @@ static PyGetSetDef ImageBase_getset[] = {
 
 static int ImageBase_Init(ImageBaseObj *self, PyObject *args, PyObject *kwds)
 {
-  //char* klist[] = { "path", NULL };
-  //const char* path = NULL;
+  char* klist[] = { "width", "height", "channels", "type", NULL };
+  int width, height, channels, type;
 
-  //if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:init", klist, &path))
-  //  return -1;
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii:init", klist,
+                                   &width, &height, &channels, &type))
+    return -1;
 
-  self->thisptr = new mve::ImageBase();
+  //self->thisptr = new mve::ImageBase();
+
+  switch (type) {
+    case mve::IMAGE_TYPE_UINT8:
+      self->thisptr = mve::Image<uint8_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_UINT16:
+      self->thisptr = mve::Image<uint16_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_UINT32:
+      self->thisptr = mve::Image<uint32_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_UINT64:
+      self->thisptr = mve::Image<uint64_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_SINT8:
+      self->thisptr = mve::Image<int8_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_SINT16:
+      self->thisptr = mve::Image<int16_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_SINT32:
+      self->thisptr = mve::Image<int32_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_SINT64:
+      self->thisptr = mve::Image<int64_t>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_FLOAT:
+      self->thisptr = mve::Image<float>::create(width, height, channels);
+      break;
+    case mve::IMAGE_TYPE_DOUBLE:
+      self->thisptr = mve::Image<double>::create(width, height, channels);
+      break;
+    default:
+      PyErr_SetString(PyExc_TypeError, "Invalid Image Type");
+      return -1;
+  }
+
   return 0;
 }
 
@@ -192,6 +231,19 @@ PyObject* ImageBase_Create(mve::ImageBase::Ptr ptr)
   ((ImageBaseObj*) obj)->thisptr = ptr;
 
   return obj;
+}
+
+bool ImageBase_IsImage(PyObject* obj)
+{
+  return PyObject_IsInstance(obj, (PyObject*) &ImageBaseType);
+}
+
+mve::ImageBase::Ptr ImageBase_GetImagePtr(PyObject* obj)
+{
+  if (ImageBase_IsImage(obj)) {
+    return ((ImageBaseObj*) obj)->thisptr;
+  }
+  return mve::ImageBase::Ptr();
 }
 
 void load_ImageBase(PyObject *mod)

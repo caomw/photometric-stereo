@@ -50,9 +50,22 @@ static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
   return NULL;
 }
 
-//static PyObject* View_SetImage(ViewObj *self, PyObject *args)
-//{
-//}
+static PyObject* View_SetImage(ViewObj *self, PyObject *args)
+{
+  const char *name;
+  PyObject *image;
+
+  if (!PyArg_ParseTuple(args, "sO:set_image", &name, &image))
+    return NULL;
+
+  mve::ImageBase::Ptr ptr = ImageBase_GetImagePtr(image);
+  if (ptr == NULL)
+    return NULL;
+  
+  self->thisptr->set_image(name, ptr);
+
+  Py_RETURN_NONE;
+}
 
 static PyObject* View_RemoveImage(ViewObj *self, PyObject *arg)
 {
@@ -70,7 +83,7 @@ static PyMethodDef View_methods[] = {
   {"cleanup_cache", (PyCFunction)View_CleanupCache, METH_NOARGS, "Clean Cache"},
   {"has_image", (PyCFunction)View_HasImage, METH_O, "Check if image embedding exists"},
   {"get_image", (PyCFunction)View_GetImage, METH_O, "Get an image embedding"},
-  //{"set_image"},
+  {"set_image", (PyCFunction)View_SetImage, METH_VARARGS, "Set an image embedding"},
   {"remove_image", (PyCFunction)View_RemoveImage, METH_O, "Remove an image embedding"},
   {NULL, NULL, 0, NULL}
 };

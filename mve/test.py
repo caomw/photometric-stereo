@@ -1,11 +1,18 @@
 # python setup.py build_ext --inplace
 import cv2
-from mve.core import Scene
+from mve.core import Scene, View, ImageBase
+import mve.core
 s = Scene('../tmp/b-daman/scene')
 print(s)
 #s.load(0)
 
 views = s.views
+
+img = ImageBase(640, 480, 3, mve.core.IMAGE_TYPE_UINT8)
+print(img)
+
+views[2].set_image("undist-L1", img)
+views[10].remove_image("undist-L1")
 
 for view in views:
     print(view)
