@@ -3,6 +3,7 @@ from distutils.extension import Extension
 import platform, sys, os.path
 from os.path import join, isdir
 from glob import glob, iglob
+from os import environ as ENV
 
 try:
     import numpy
@@ -11,12 +12,17 @@ except:
     print('pip install numpy')
     sys.exit(1)
 
-if platform.system() == 'Darwin':
-    LIB_PREFIX = '/usr/local/lib/mve/libs'
-elif platform.system() == 'Linux':
-    LIB_PREFIX = '/opt/mve/libs'
+if 'MVE_ROOT' in ENV:
+    MVE_ROOT = ENV['MVE_ROOT']
 else:
-    raise RuntimeError('Unknown Operating System')
+    if platform.system() == 'Darwin':
+        MVE_ROOT = '/usr/local/lib/mve'
+    elif platform.system() == 'Linux':
+        MVE_ROOT = '/opt/mve'
+    else:
+        raise RuntimeError('Environment Var $MVE_ROOT should be defined')
+
+LIB_PREFIX = join(MVE_ROOT, 'libs')
 
 if not isdir(LIB_PREFIX):
     raise RuntimeError(LIB_PREFIX + ' should be a directory')
@@ -44,5 +50,10 @@ def extensions():
 
 setup(
     name = 'mve',
+    version = '1.0',
+    description = 'Multi-View Environment',
+    author = 'David Lin',
+    author_email = 'davll.xc@gmail.com',
+    packages = ['mve'],
     ext_modules = extensions()
 )
