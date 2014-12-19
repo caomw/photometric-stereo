@@ -24,7 +24,7 @@ static PyObject* Scene_Load(SceneObj *self, PyObject *arg)
   Py_RETURN_NONE;
 }
 
-static PyObject* Scene_CleanupCache(SceneObj *self, PyObject *arg)
+static PyObject* Scene_CleanupCache(SceneObj *self)
 {
   self->thisptr->cache_cleanup();
   Py_RETURN_NONE;
@@ -60,10 +60,20 @@ static PyGetSetDef Scene_getset[] = {
   {NULL, NULL, NULL, NULL, NULL}
 };
 
-static int Scene_Init(SceneObj *self, PyObject *args, PyObject *keywords)
+static int Scene_Init(SceneObj *self, PyObject *args, PyObject *kwds)
 {
-  //printf("%p\n", self->thisptr.get());
-  self->thisptr = mve::Scene::create();
+  char* klist[] = { "path", NULL };
+  const char* path = NULL;
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:init", klist, &path))
+    return -1;
+
+  if (path) {
+    self->thisptr = mve::Scene::create(path);
+  } else {
+    self->thisptr = mve::Scene::create();
+  }
+
   return 0;
 }
 

@@ -30,7 +30,14 @@ struct ImageBaseObj {
   mve::ImageBase::Ptr thisptr;
 };
 
+static PyObject* ImageBase_Clone(ImageBaseObj *self)
+{
+  mve::ImageBase::Ptr ptr = self->thisptr->duplicate();
+  return ImageBase_Create(ptr);
+}
+
 static PyMethodDef ImageBase_methods[] = {
+  {"clone", (PyCFunction)ImageBase_Clone, METH_NOARGS, "Clone"},
   {NULL, NULL, 0, NULL}
 };
 
@@ -68,7 +75,7 @@ static PyObject* ImageBase_GetData(ImageBaseObj *self, void* closure)
   PyObject* arr = PyArray_SimpleNewFromData(ndim, dims, _ImageTypeToNumpyDataType(ptr->get_type()), data);
 
   Py_INCREF((PyObject*) self);
-  PyArray_SetBaseObject((PyArrayObject*)arr, (PyObject*)self);
+  PyArray_SetBaseObject((PyArrayObject*)arr, (PyObject*)self); // steal
 
   return arr;
 }
@@ -85,6 +92,12 @@ static PyGetSetDef ImageBase_getset[] = {
 
 static int ImageBase_Init(ImageBaseObj *self, PyObject *args, PyObject *kwds)
 {
+  //char* klist[] = { "path", NULL };
+  //const char* path = NULL;
+
+  //if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:init", klist, &path))
+  //  return -1;
+
   self->thisptr = new mve::ImageBase();
   return 0;
 }

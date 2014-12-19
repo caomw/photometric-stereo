@@ -1,8 +1,7 @@
 # python setup.py build_ext --inplace
 import cv2
 from mve.core import Scene
-s = Scene()
-s.load('../tmp/b-daman/scene')
+s = Scene('../tmp/b-daman/scene')
 print(s)
 #s.load(0)
 
