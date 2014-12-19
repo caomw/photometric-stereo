@@ -8,6 +8,8 @@
 #  define PyString_FromFormat PyUnicode_FromFormat
 #endif
 
+#pragma GCC diagnostic ignored "-Wc++11-compat-deprecated-writable-strings"
+
 static int _ImageTypeToNumpyDataType(mve::ImageType ty)
 {
   switch (ty) {
@@ -21,6 +23,7 @@ static int _ImageTypeToNumpyDataType(mve::ImageType ty)
     case mve::IMAGE_TYPE_SINT64: return NPY_INT64;
     case mve::IMAGE_TYPE_FLOAT: return NPY_FLOAT32;
     case mve::IMAGE_TYPE_DOUBLE: return NPY_FLOAT64;
+    case mve::IMAGE_TYPE_UNKNOWN: return NPY_NOTYPE;
   };
   return NPY_NOTYPE;
 }

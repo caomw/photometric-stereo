@@ -10,6 +10,8 @@
 #  define PyString_FromFormat PyUnicode_FromFormat
 #endif
 
+#pragma GCC diagnostic ignored "-Wc++11-compat-deprecated-writable-strings"
+
 /***************************************************************************
  * Camera Info Object
  *

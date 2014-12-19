@@ -39,7 +39,7 @@ def get_libraries():
     return ['mve', 'mve_util']
 
 def extensions():
-    return [Extension('mve.core', 
+    return [Extension('mve.core',
                       sources = glob(join('src', 'core', '*.cpp')),
                       include_dirs = get_include_dirs(),
                       library_dirs = get_library_dirs(),
