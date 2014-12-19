@@ -202,7 +202,7 @@ static PyTypeObject ViewType = {
   0, // tp_getattro
   0, // tp_setattro
   0, // tp_as_buffer
-  Py_TPFLAGS_HAVE_WEAKREFS | Py_TPFLAGS_HAVE_CLASS, // tp_flags
+  Py_TPFLAGS_DEFAULT, // tp_flags
   "MVE View", // tp_doc
   0, // tp_traverse
   0, // tp_clear
