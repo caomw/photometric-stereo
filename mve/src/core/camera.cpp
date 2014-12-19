@@ -257,8 +257,9 @@ PyObject* CameraInfoObj_Create(const mve::CameraInfo& cam)
   Py_DECREF(args);
   Py_DECREF(kwds);
 
-  //((CameraInfoObj*) obj)->instance = cam;
-  memcpy(&(((CameraInfoObj*) obj)->instance), &cam, sizeof(mve::CameraInfo));
+  if (obj) {
+    ((CameraInfoObj*) obj)->instance = cam;
+  }
 
   return obj;
 }

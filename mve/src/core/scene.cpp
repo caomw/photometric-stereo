@@ -18,9 +18,11 @@ struct SceneObj {
 static PyObject* Scene_Load(SceneObj *self, PyObject *arg)
 {
   const char* path = PyString_AsString(arg);
-  if (path) {
-    self->thisptr->load_scene(path);
-  }
+  if (!path)
+    return NULL;
+
+  self->thisptr->load_scene(path);
+
   Py_RETURN_NONE;
 }
 

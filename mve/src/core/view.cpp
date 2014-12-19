@@ -25,29 +25,26 @@ static PyObject* View_CleanupCache(ViewObj *self)
 static PyObject* View_HasImage(ViewObj *self, PyObject *arg)
 {
   const char* name = PyString_AsString(arg);
+  if (!name)
+    return NULL;
 
-  if (name) {
-    if (self->thisptr->has_image_embedding(name)) {
-      Py_RETURN_TRUE;
-    }
-    Py_RETURN_FALSE;
+  if (self->thisptr->has_image_embedding(name)) {
+    Py_RETURN_TRUE;
   }
-
-  return NULL;
+  Py_RETURN_FALSE;
 }
 
 static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
 {
   const char* name = PyString_AsString(arg);
+  if (!name)
+    return NULL;
 
-  if (name) {
-    mve::ImageBase::Ptr ptr = self->thisptr->get_image(name);
-    if (ptr.get() != NULL)
-      return ImageBase_Create(ptr);
-    Py_RETURN_NONE;
-  }
+  mve::ImageBase::Ptr ptr = self->thisptr->get_image(name);
 
-  return NULL;
+  if (ptr.get() != NULL)
+    return ImageBase_Create(ptr);
+  Py_RETURN_NONE;
 }
 
 static PyObject* View_SetImage(ViewObj *self, PyObject *args)
@@ -70,13 +67,12 @@ static PyObject* View_SetImage(ViewObj *self, PyObject *args)
 static PyObject* View_RemoveImage(ViewObj *self, PyObject *arg)
 {
   const char* name = PyString_AsString(arg);
+  if (!name)
+    return NULL;
 
-  if (name) {
-    self->thisptr->remove_embedding(name);
-    Py_RETURN_NONE;
-  }
+  self->thisptr->remove_embedding(name);
 
-  return NULL;
+  Py_RETURN_NONE;
 }
 
 static PyMethodDef View_methods[] = {
@@ -106,7 +102,10 @@ static PyObject* View_GetName(ViewObj *self, void* closure)
 
 static int View_SetName(ViewObj *self, PyObject *value, void* closure)
 {
-  self->thisptr->set_name(PyString_AsString(value));
+  const char * name = PyString_AsString(value);
+  if (!name)
+    return -1;
+  self->thisptr->set_name(name);
   return 0;
 }
 

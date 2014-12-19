@@ -70,10 +70,14 @@ static PyObject* ImageBase_GetImageType(ImageBaseObj *self, void* closure)
 static PyObject* ImageBase_GetData(ImageBaseObj *self, void* closure)
 {
   mve::ImageBase::Ptr ptr = self->thisptr;
+
   int ndim = (ptr->channels() == 1 ? 2 : 3);
   npy_intp dims[] = { ptr->height(), ptr->width(), ptr->channels() };
   void *data = ptr->get_byte_pointer();
+
   PyObject* arr = PyArray_SimpleNewFromData(ndim, dims, _ImageTypeToNumpyDataType(ptr->get_type()), data);
+  if (!arr)
+    return NULL;
 
   Py_INCREF((PyObject*) self);
   PyArray_SetBaseObject((PyArrayObject*)arr, (PyObject*)self); // steal
@@ -228,7 +232,9 @@ PyObject* ImageBase_Create(mve::ImageBase::Ptr ptr)
   Py_DECREF(args);
   Py_DECREF(kwds);
 
-  ((ImageBaseObj*) obj)->thisptr = ptr;
+  if (obj) {
+    ((ImageBaseObj*) obj)->thisptr = ptr;
+  }
 
   return obj;
 }
