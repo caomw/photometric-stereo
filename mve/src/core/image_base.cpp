@@ -80,9 +80,10 @@ static PyObject* ImageBase_GetData(ImageBaseObj *self, void* closure)
 
   int ndim = (ptr->channels() == 1 ? 2 : 3);
   npy_intp dims[] = { ptr->height(), ptr->width(), ptr->channels() };
+  int dtype = _ImageTypeToNumpyDataType(ptr->get_type());
   void *data = ptr->get_byte_pointer();
 
-  PyObject* arr = PyArray_SimpleNewFromData(ndim, dims, _ImageTypeToNumpyDataType(ptr->get_type()), data);
+  PyObject* arr = PyArray_SimpleNewFromData(ndim, dims, dtype, data);
   if (!arr)
     return NULL;
 
@@ -233,6 +234,10 @@ static PyTypeObject ImageBaseType = {
 
 PyObject* ImageBase_Create(mve::ImageBase::Ptr ptr)
 {
+  if (ptr.get() == NULL) {
+    abort();
+  }
+
   PyObject* args = PyTuple_New(0);
   PyObject* kwds = PyDict_New();
   PyObject* obj = ImageBaseType.tp_new(&ImageBaseType, args, kwds);
@@ -246,14 +251,14 @@ PyObject* ImageBase_Create(mve::ImageBase::Ptr ptr)
   return obj;
 }
 
-bool ImageBase_IsImage(PyObject* obj)
+bool ImageBase_Check(PyObject* obj)
 {
   return PyObject_IsInstance(obj, (PyObject*) &ImageBaseType);
 }
 
 mve::ImageBase::Ptr ImageBase_GetImagePtr(PyObject* obj)
 {
-  if (ImageBase_IsImage(obj)) {
+  if (ImageBase_Check(obj)) {
     return ((ImageBaseObj*) obj)->thisptr;
   }
   return mve::ImageBase::Ptr();

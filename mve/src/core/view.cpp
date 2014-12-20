@@ -65,6 +65,7 @@ static PyObject* View_GetImage(ViewObj *self, PyObject *arg)
 
   if (ptr.get() != NULL)
     return ImageBase_Create(ptr);
+
   Py_RETURN_NONE;
 }
 
