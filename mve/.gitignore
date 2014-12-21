@@ -1,6 +1,0 @@
-*.so
-*.pyc
-/build
-/mve/*.cpp
-/mve/*.c
-__pycache__
