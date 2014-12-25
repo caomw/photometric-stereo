@@ -15,14 +15,23 @@ def prepare():
     ARGS = parse_args()
     scene = Scene(ARGS.scene)
 
+def show(name, img):
+    from cv2 import imshow, waitKey, destroyWindow
+    from numpy import amin, amax, nonzero
+    mindepth, maxdepth = amin(img[nonzero(img)]), amax(img)
+    imshow(name, (img - mindepth) / (maxdepth - mindepth))
+    waitKey(0)
+    #destroyWindow(name)
+
 def run():
     global scene, ARGS
     for view in scene.views:
         if view.has_image(ARGS.input):
             src = view.get_image(ARGS.input)
             dst = densify(src)
-            view.set_image(ARGS.output, dst)
-            view.save()
+            show('test', dst)
+            #view.set_image(ARGS.output, dst)
+            #view.save()
 
 if __name__ == '__main__':
     prepare()
