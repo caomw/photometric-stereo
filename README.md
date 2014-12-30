@@ -1,18 +1,14 @@
-Photometric Stereo
-==================
+Multi-View Stereo
+=================
 
 ## Dependencies
 
 - Python 2.7
-- OpenCV 2.4 / 3.x
-- Numpy (`pip install numpy`)
-- PyOpenGL (`pip install PyOpenGL PyOpenGL-accelerate`)
-- MVE (Multi-View Environment)
+- OpenCV 2.x/3.x
+- [Numpy](http://www.numpy.org/)
+- [Pillow (PIL fork)](https://github.com/python-pillow/Pillow)
+- [MVE (Multi-View Environment)](https://github.com/simonfuhrmann/mve)
+- [Python binding for MVE](https://github.com/davll/py-mve)
 
 ## Build
-
-    cd mve
-    python setup.py build_ext --inplace
-
 ## Run
-

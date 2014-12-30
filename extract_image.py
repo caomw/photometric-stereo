@@ -1,4 +1,4 @@
-def parse_args():
+def _parse_args():
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Extract images from a MVE scene')
     parser.add_argument('-i', '--image', help='Image Name', default='original')
@@ -7,28 +7,30 @@ def parse_args():
     parser.add_argument('output', help='Output Dir')
     return parser.parse_args()
 
-ARGS = parse_args()
-
 from mve.core import Scene
 from os.path import join, isdir
 from os import mkdir
 from PIL import Image
 
-def prepare():
+def extract_image(scene, image_name, output_dir, output_format = 'jpg'):
+    for view in scene.views:
+        if view.has_image(image_name):
+            img = view.get_image(image_name)
+            filename = "{} {}.{}".format(view.id, image_name, output_format)
+            Image.fromarray(img).save(join(output_dir, filename))
+        view.cleanup_cache()
+
+def _prepare():
     global scene, ARGS
+    ARGS = _parse_args()
     if not isdir(ARGS.output):
         mkdir(ARGS.output)
     scene = Scene(ARGS.scene)
 
-def run():
+def _run():
     global scene, ARGS
-    for view in scene.views:
-        if view.has_image(ARGS.image):
-            img = view.get_image(ARGS.image)
-            filename = "{} {}.{}".format(view.id, ARGS.image, ARGS.format)
-            Image.fromarray(img).save(join(ARGS.output, filename))
-        view.cleanup_cache()
+    extract_image(scene, ARGS.image, ARGS.output, ARGS.format)
 
 if __name__ == '__main__':
-    prepare()
-    run()
+    _prepare()
+    _run()
