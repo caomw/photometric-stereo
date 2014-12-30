@@ -1,0 +1,3 @@
+[submodule "plyfile"]
+	path = plyfile
+	url = https://github.com/dranjan/python-plyfile.git
