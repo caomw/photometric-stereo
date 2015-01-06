@@ -2,6 +2,7 @@ def parse_args():
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Reduce Noise of Pointset')
     parser.add_argument('-i', '--image', help='Image Name', default='undistorted')
+    parser.add_argument('-v', '--views', help='Selected Views', nargs='*', type=int)
     parser.add_argument('scene', help='Scene Directory')
     parser.add_argument('input', help='Input Noisy Point Cloud')
     parser.add_argument('output', help='Output Point Cloud')
@@ -51,6 +52,8 @@ def run():
 
     # Create View Array
     views = scene.views
+    if ARGS.views:
+        views = filter(lambda v: v.id in ARGS.views, views)
     #view_txfms = map(get_view_transformation, views)
     #view_images = map(lambda v: v.get_image(ARGS.image), views)
 
@@ -66,7 +69,9 @@ def run():
     colors[:,2] = vertex_element.data['blue']
 
     # Prepare filter list
-    selector = np.ones(num_vert, dtype=np.bool)
+    #selector = np.ones(num_vert, dtype=np.bool)
+    counter = np.zeros(num_vert, dtype=np.int32)
+    passer = np.zeros(num_vert, dtype=np.int32)
 
     # Filter out vertices for each view
     for view in views:
@@ -74,40 +79,50 @@ def run():
         image = view.get_image(ARGS.image)
         width, height = image.shape[1], image.shape[0]
 
-        tpos = np.dot(txfm, positions)
-        np.divide(tpos, tpos[3,:], output=tpos)
-        np.subtract(tpos, 0.5, output=tpos)
-        tx, ty = tpos[0,:], tpos[1,:]
-
-        tcoords = tpos[1::-1,:]
+        tcoords = np.dot(txfm, positions)
+        np.divide(tcoords, tcoords[3,:], output=tcoords)
+        np.subtract(tcoords, 0.5, output=tcoords)
+        tcoords = tcoords[1::-1,:]
+        print(tcoords)
 
         visibility = np.logical_and(tcoords[0,:] >= 0, tcoords[1,:] >= 0)
         np.logical_and(visibility, (tcoords[0,:] < height), out=visibility)
         np.logical_and(visibility, (tcoords[1,:] < width), out=visibility)
+        #print('visibility:', visibility)
 
-        tcoords_clipped = np.empty((2, num_vert), dtype=np.float32)
-        np.clip(tcoords[0], 0, height-1, out=tcoords_clipped[0,:])
-        np.clip(tcoords[1], 0, width-1, out=tcoords_clipped[1,:])
+        #tcoords_clipped = np.empty((2, num_vert), dtype=np.int32)
+        #np.clip(tcoords[0], 0, height-1, out=tcoords_clipped[0,:])
+        #np.clip(tcoords[1], 0, width-1, out=tcoords_clipped[1,:])
 
-        np.floor(tcoords_clipped, out=tcoords_clipped)
-        tcolors = image[np.array(tcoords_clipped, dtype=np.int32)]
+        #tcolors = image[tcoords_clipped] # it always raises MemoryError
 
-        #tcolors = np.empty((num_vert, 3), dtype=np.int16)
-        #for vid in np.ndindex(num_vert):
-        #    if not visibility[vid]:
-        #        tcolors[vid,:] = colors[vid]
-        #    else:
-        #        i, j = np.floor(ty[vid]), np.floor(tx[vid])
-        #        tcolors[vid,:] = image[i, j]
+        tcolors = np.empty((num_vert, 3), dtype=np.int32)
+        for vid in np.ndindex(num_vert):
+            if not visibility[vid]:
+                tcolors[vid,:] = 0
+            else:
+                tx = np.floor(tcoords[:,vid])
+                texel = image[int(tx[0]), int(tx[1])]
+                tcolors[vid,:] = np.subtract(texel, colors[vid])
 
-        diff3 = np.subtract(tcolors, colors)
-        np.square(diff3, out=diff3)
-        diff = np.sum(diff3, axis=1)
+        np.square(tcolors, out=tcolors)
+        diff = np.sum(tcolors, axis=1)
+        #print('diff:', diff)
+        #diff = tdiffs
         #print(diff)
 
-        #np.logical_or(diff < 500, np.logical_not(t_inside))
-        np.logical_and(selector, diff < 500, out=selector)
-        print('Selector: %d passed' % np.count_nonzero(selector))
+        selector = np.logical_and(diff < 100, visibility)
+        np.add(counter[visibility], 1, out=counter[visibility])
+        np.add(passer[selector], 1, out=passer[selector])
+
+        print('view[%d]: (%d/%d) passed' % (view.id, np.count_nonzero(selector), np.count_nonzero(visibility)))
+
+        del image
+        view.cleanup_cache()
+
+    # Determine Selector
+    selector = np.zeros(num_vert, dtype=np.bool)
+    selector[ np.add(passer, passer) > counter ] = True
 
     # Extract vertices filtered
     from plyfile import PlyElement, PlyData
