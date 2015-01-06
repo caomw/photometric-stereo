@@ -83,27 +83,21 @@ def run():
         np.divide(tcoords, tcoords[3,:], output=tcoords)
         np.subtract(tcoords, 0.5, output=tcoords)
         tcoords = tcoords[1::-1,:]
-        print(tcoords)
+        #print(tcoords)
 
-        visibility = np.logical_and(tcoords[0,:] >= 0, tcoords[1,:] >= 0)
-        np.logical_and(visibility, (tcoords[0,:] < height), out=visibility)
-        np.logical_and(visibility, (tcoords[1,:] < width), out=visibility)
-        #print('visibility:', visibility)
-
-        #tcoords_clipped = np.empty((2, num_vert), dtype=np.int32)
-        #np.clip(tcoords[0], 0, height-1, out=tcoords_clipped[0,:])
-        #np.clip(tcoords[1], 0, width-1, out=tcoords_clipped[1,:])
-
-        #tcolors = image[tcoords_clipped] # it always raises MemoryError
+        visibility = np.logical_and(tcoords[0] >= 0, tcoords[1] >= 0)
+        np.logical_and(visibility, (tcoords[0] < height), out=visibility)
+        np.logical_and(visibility, (tcoords[1] < width), out=visibility)
+        #print('visibility:', visibility.shape)
 
         tcolors = np.empty((num_vert, 3), dtype=np.int32)
-        for vid in np.ndindex(num_vert):
+        for vid in xrange(0, num_vert):
+            i, j = tcoords[0][vid], tcoords[1][vid]
             if not visibility[vid]:
-                tcolors[vid,:] = 0
-            else:
-                tx = np.floor(tcoords[:,vid])
-                texel = image[int(tx[0]), int(tx[1])]
-                tcolors[vid,:] = np.subtract(texel, colors[vid])
+                continue
+            #if i < 0 or j < 0 or i >= height or j >= width:
+            #    continue
+            tcolors[vid,:] = np.subtract(image[i, j], colors[vid])
 
         np.square(tcolors, out=tcolors)
         diff = np.sum(tcolors, axis=1)
