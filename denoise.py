@@ -95,8 +95,6 @@ def run():
             i, j = tcoords[0][vid], tcoords[1][vid]
             if not visibility[vid]:
                 continue
-            #if i < 0 or j < 0 or i >= height or j >= width:
-            #    continue
             tcolors[vid,:] = np.subtract(image[i, j], colors[vid])
 
         np.square(tcolors, out=tcolors)
@@ -106,9 +104,17 @@ def run():
         #print(diff)
 
         selector = np.logical_and(diff < 100, visibility)
-        np.add(counter[visibility], 1, out=counter[visibility])
-        np.add(passer[selector], 1, out=passer[selector])
+        counter[visibility] += 1
+        passer[selector] += 1
 
+        # TODO: Occlusion Problem
+        #   Some correct points are actually occluded by other surfaces in some views
+        #   It's hard for the program to determine occluded correct points and wrong points
+        #
+        # Possible Solution:
+        #   Use dense depth map for depth testing
+        #   If the depth value of the point is greater than the depth map, the point is occluded
+        #
         print('view[%d]: (%d/%d) passed' % (view.id, np.count_nonzero(selector), np.count_nonzero(visibility)))
 
         del image
