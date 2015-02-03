@@ -30,11 +30,11 @@ class Pcl < Formula
   #depends_on "openni"     => :optional
   #depends_on "openni2"     => :optional
   depends_on :libpng
-  #depends_on "python"     => :recommended
+  depends_on "python"     => :recommended
 
-  #resource "python-binding" do
-  #  url 'https://github.com/strawlab/python-pcl.git'
-  #end
+  resource "python-binding" do
+    url 'https://github.com/strawlab/python-pcl.git'
+  end
 
   def install
     args = std_cmake_args + %W(
@@ -68,12 +68,12 @@ class Pcl < Formula
       system "make install"
     end
 
-    #if build.with? "python"
-    #  ENV['PKG_CONFIG_PATH'] = (lib/'pkgconfig').to_s
-    #  resource("python-binding").stage do
-    #    system "python", "setup.py", "install", "--prefix=#{prefix}"
-    #  end
-    #end
+    if build.with? "python"
+      resource("python-binding").stage do
+        ENV['PKG_CONFIG_PATH'] = (lib/'pkgconfig').to_s
+        system "python", "setup.py", "install", "--prefix=#{prefix}"
+      end
+    end
 
   end
 end
