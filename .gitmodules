@@ -1,6 +1,9 @@
-[submodule "plyfile"]
-	path = plyfile
-	url = https://github.com/dranjan/python-plyfile.git
-[submodule "pcl"]
-	path = pcl
+[submodule "py-pcl"]
+	path = py-pcl
 	url = https://github.com/strawlab/python-pcl.git
+[submodule "py-mve"]
+	path = py-mve
+	url = git@github.com:davll/py-mve.git
+[submodule "py-plyfile"]
+	path = py-plyfile
+	url = https://github.com/dranjan/python-plyfile.git

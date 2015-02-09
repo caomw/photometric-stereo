@@ -14,13 +14,9 @@ class Mve < Formula
 
   def install
     if ENV.compiler == :clang
-      ENV['OPENMP'] = ""
       ENV['CXXFLAGS'] = '-stdlib=libc++'
       ENV['LDFLAGS'] = '-stdlib=libc++'
     end
-
-    inreplace "Makefile.inc", "-mmacosx-version-min=10.6",
-                              "-mmacosx-version-min=10.8"
 
     system 'make'
     system 'make', '-C', 'apps/bundle2ply'
